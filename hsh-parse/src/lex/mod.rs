@@ -1,3 +1,5 @@
+mod token;
+
 use std::str::CharIndices;
 
 #[derive(Debug)]
@@ -29,6 +31,8 @@ impl<'a> Lexer<'a> {
 
         // currently in a quoted block (" or ')
         let mut quote: Option<char> = None;
+
+        let mut symbol = false;
         // ------------------------------
 
         let result: Vec<(usize, char)> = self
@@ -47,6 +51,10 @@ impl<'a> Lexer<'a> {
                         } else if quote.unwrap() == c {
                             quote = None;
                         }
+                    }
+                    c_ if c_.is_alphanumeric() => {
+                        escape = false;
+                        symbol = true;
                     }
                     _ => {
                         escape = false;
@@ -83,13 +91,13 @@ mod tests {
 
         for &(char, start, length) in results {
             let token = lex.next();
-            assert_eq!(token.as_ref().is_some(), true);
+            assert!(token.as_ref().is_some());
             assert_eq!(token.as_ref().unwrap().source, char);
             assert_eq!(token.as_ref().unwrap().start, start);
             assert_eq!(token.as_ref().unwrap().length, length);
         }
         let token = lex.next();
-        assert_eq!(token.is_none(), true);
+        assert!(token.is_none());
     }
 
     #[test]
@@ -134,7 +142,7 @@ mod tests {
     fn test_one() {
         let mut lex = Lexer::new("abcdefg");
         let token = lex.next();
-        assert_eq!(token.is_some(), true);
+        assert!(token.is_some());
         assert_eq!(token.as_ref().unwrap().source, "abcdefg");
         assert_eq!(token.as_ref().unwrap().start, 0);
         assert_eq!(token.as_ref().unwrap().length, 7);
@@ -143,20 +151,20 @@ mod tests {
     #[test]
     fn test_empty() {
         let mut lex = Lexer::new("");
-        assert_eq!(lex.next().is_none(), true);
+        assert!(lex.next().is_none());
 
         let mut lex = Lexer::new("  \n   ");
-        assert_eq!(lex.next().is_none(), true);
+        assert!(lex.next().is_none());
     }
 
     #[test]
     fn test_mixed() {
         let mut lex = Lexer::new("\t \na\t \n");
         let token = lex.next();
-        assert_eq!(token.is_some(), true);
+        assert!(token.is_some());
         assert_eq!(token.as_ref().unwrap().source, "a");
         assert_eq!(token.as_ref().unwrap().start, 3);
         assert_eq!(token.as_ref().unwrap().length, 1);
-        assert_eq!(lex.next().is_none(), true);
+        assert!(lex.next().is_none());
     }
 }
