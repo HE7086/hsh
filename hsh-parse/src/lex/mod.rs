@@ -62,9 +62,6 @@ impl<'a> Lexer<'a> {
                     if !last_escape {
                         symbol = Some(false);
                     }
-                    if last_symbol.unwrap_or(false) {
-                        break;
-                    }
                 }
                 c_ if c_.is_whitespace() => {
                     escape = false;
@@ -74,12 +71,12 @@ impl<'a> Lexer<'a> {
                     if !last_escape {
                         symbol = Some(true);
                     }
-                    if !last_symbol.unwrap_or(true) {
-                        break;
-                    }
                 }
             }
-            if last_escape || quote.is_some() || !c.is_whitespace() {
+            if last_escape || quote.is_some() ||
+                last_symbol.is_none() ||
+                (last_symbol == symbol && !c.is_whitespace())
+            {
                 result.push(self.chars.next().unwrap());
             } else {
                 break;
@@ -111,9 +108,10 @@ mod tests {
 
     #[test]
     fn run() {
-        test_group("\\ a\\ b\\ c def", &[
-            ("\\ a\\ b\\ c", 0, 9),
-            ("def", 10, 3),
+        test_group("<a >", &[
+            ("<", 0, 1),
+            ("a", 1, 1),
+            (">", 3, 1),
         ]);
     }
 
@@ -185,6 +183,24 @@ mod tests {
             (">", 16, 1),
         ]);
     }
+
+    // #[test]
+    // fn test2() {
+    //     test_group("echo \"hello, world!\" | sed 's/hello/hi/g' | grep -o world >> output.txt 2>&1", &[
+    //         ("echo", 0, 4),
+    //         ("\"hello, world!\"", 5, 15),
+    //         ("|", 21, 1),
+    //         ("sed", 23, 3),
+    //         ("'s/hello/hi/g'", 27, 14),
+    //         ("|", 42, 1),
+    //         ("grep", 44, 4),
+    //         ("-o", 49, 2),
+    //         ("world", 52, 5),
+    //         (">>", 0, 1),
+    //         ("output.txt", 0, 1),
+    //         ("2>&1", 0, 1),
+    //     ]);
+    // }
 
     #[test]
     fn test_one() {
