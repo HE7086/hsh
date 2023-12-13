@@ -22,11 +22,17 @@ impl<'a> Lexer<'a> {
     }
 
     fn next(&mut self) -> Option<Token<'a>> {
+        let mut escape = false;
         let result: Vec<(usize, char)> = self
             .chars
             .by_ref()
             .skip_while(|&(_, c)| c.is_whitespace())
-            .take_while(|&(_, c)| !c.is_whitespace())
+            .take_while(|&(_, c)| {
+                let last_escape = escape;
+                escape = c == '\\';
+                return last_escape || !c.is_whitespace();
+            }
+            )
             .collect();
         if result.is_empty() {
             return None;
@@ -141,5 +147,15 @@ mod tests {
             assert_eq!(token.as_ref().unwrap().length, length);
         }
         assert_eq!(lex.next().is_none(), true);
+    }
+
+    #[test]
+    fn test_escape() {
+        let mut lex = Lexer::new("\\ a\\ b\\ c");
+        let token = lex.next();
+        assert_eq!(token.is_some(), true);
+        assert_eq!(token.as_ref().unwrap().source, "\\ a\\ b\\ c");
+        assert_eq!(token.as_ref().unwrap().start, 0);
+        assert_eq!(token.as_ref().unwrap().length, 9);
     }
 }
