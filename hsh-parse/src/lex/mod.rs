@@ -22,18 +22,38 @@ impl<'a> Lexer<'a> {
     }
 
     fn next(&mut self) -> Option<Token<'a>> {
+        // ---------- contexts ----------
+
+        // last char is a backslash
         let mut escape = false;
+
+        // currently in a quoted block (" or ')
+        let mut quote: Option<char> = None;
+        // ------------------------------
+
         let result: Vec<(usize, char)> = self
             .chars
             .by_ref()
             .skip_while(|&(_, c)| c.is_whitespace())
             .take_while(|&(_, c)| {
                 let last_escape = escape;
-                escape = c == '\\';
-                return last_escape || !c.is_whitespace();
-            }
-            )
-            .collect();
+                match c {
+                    '\\' => {
+                        escape = true;
+                    }
+                    '\'' | '\"' => {
+                        if quote.is_none() {
+                            quote = Some(c);
+                        } else if quote.unwrap() == c {
+                            quote = None;
+                        }
+                    }
+                    _ => {
+                        escape = false;
+                    }
+                }
+                return last_escape || quote.is_some() || !c.is_whitespace();
+            }).collect();
         if result.is_empty() {
             return None;
         }
@@ -58,18 +78,10 @@ impl<'a> Lexer<'a> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test1() {
-        let mut lex = Lexer::new("a bc d efg");
+    fn test_group(source: &str, results: &[(&str, usize, usize)]) {
+        let mut lex = Lexer::new(source);
 
-        let results = [
-            ("a", 0, 1),
-            ("bc", 2, 2),
-            ("d", 5, 1),
-            ("efg", 7, 3),
-        ];
-
-        for (char, start, length) in results {
+        for &(char, start, length) in results {
             let token = lex.next();
             assert_eq!(token.as_ref().is_some(), true);
             assert_eq!(token.as_ref().unwrap().source, char);
@@ -81,24 +93,41 @@ mod tests {
     }
 
     #[test]
-    fn test2() {
-        let mut lex = Lexer::new("a    bc\n  d \t  efg \n\n");
-
-        let results = [
+    fn test1() {
+        // basic
+        test_group("a bc d efg", &[
+            ("a", 0, 1),
+            ("bc", 2, 2),
+            ("d", 5, 1),
+            ("efg", 7, 3),
+        ]);
+        // whitespaces
+        test_group("a    bc\n  d \t  efg \n\n", &[
             ("a", 0, 1),
             ("bc", 5, 2),
             ("d", 10, 1),
             ("efg", 15, 3),
-        ];
-
-        for (char, start, length) in results {
-            let token = lex.next();
-            assert_eq!(token.is_some(), true);
-            assert_eq!(token.as_ref().unwrap().source, char);
-            assert_eq!(token.as_ref().unwrap().start, start);
-            assert_eq!(token.as_ref().unwrap().length, length);
-        }
-        assert_eq!(lex.next().is_none(), true);
+        ]);
+        // unicode
+        test_group("测试 äöü ☺☺☺☺", &[
+            ("测试", 0, 6),
+            ("äöü", 7, 6),
+            ("☺☺☺☺", 14, 12),
+        ]);
+        // escape
+        test_group("\\ a\\ b\\ c def", &[
+            ("\\ a\\ b\\ c", 0, 9),
+            ("def", 10, 3),
+        ]);
+        // quotes
+        test_group("\"abc\'\" def\'", &[
+            ("\"abc\'\"", 0, 6),
+            ("def\'", 7, 4),
+        ]);
+        test_group("\"abc\\ \" \" def\"", &[
+            ("\"abc\\ \"", 0, 7),
+            ("\" def\"", 8, 6),
+        ]);
     }
 
     #[test]
@@ -129,33 +158,5 @@ mod tests {
         assert_eq!(token.as_ref().unwrap().start, 3);
         assert_eq!(token.as_ref().unwrap().length, 1);
         assert_eq!(lex.next().is_none(), true);
-    }
-
-    #[test]
-    fn test_unicode() {
-        let mut lex = Lexer::new("测试 äöü ☺☺☺☺");
-        let results = [
-            ("测试", 0, 6),
-            ("äöü", 7, 6),
-            ("☺☺☺☺", 14, 12),
-        ];
-        for (char, start, length) in results {
-            let token = lex.next();
-            assert_eq!(token.is_some(), true);
-            assert_eq!(token.as_ref().unwrap().source, char);
-            assert_eq!(token.as_ref().unwrap().start, start);
-            assert_eq!(token.as_ref().unwrap().length, length);
-        }
-        assert_eq!(lex.next().is_none(), true);
-    }
-
-    #[test]
-    fn test_escape() {
-        let mut lex = Lexer::new("\\ a\\ b\\ c");
-        let token = lex.next();
-        assert_eq!(token.is_some(), true);
-        assert_eq!(token.as_ref().unwrap().source, "\\ a\\ b\\ c");
-        assert_eq!(token.as_ref().unwrap().start, 0);
-        assert_eq!(token.as_ref().unwrap().length, 9);
     }
 }
