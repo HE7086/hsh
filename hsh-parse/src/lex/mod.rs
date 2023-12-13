@@ -23,8 +23,12 @@ impl<'a> Lexer<'a> {
             chars: source.char_indices().peekable(),
         }
     }
+}
 
-    fn next(&mut self) -> Option<Token<'a>> {
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         // ---------- contexts ----------
 
         // last char is a backslash
