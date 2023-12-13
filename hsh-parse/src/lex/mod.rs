@@ -1,5 +1,6 @@
 mod token;
 
+use std::iter::Peekable;
 use std::str::CharIndices;
 
 #[derive(Debug)]
@@ -12,14 +13,14 @@ struct Token<'a> {
 #[derive(Debug)]
 struct Lexer<'a> {
     source: &'a str,
-    chars: CharIndices<'a>,
+    chars: Peekable<CharIndices<'a>>,
 }
 
 impl<'a> Lexer<'a> {
     fn new(source: &'a str) -> Self {
         Self {
             source,
-            chars: source.char_indices(),
+            chars: source.char_indices().peekable(),
         }
     }
 
@@ -32,36 +33,58 @@ impl<'a> Lexer<'a> {
         // currently in a quoted block (" or ')
         let mut quote: Option<char> = None;
 
-        let mut symbol = false;
+        // last char is a symbol
+        let mut symbol: Option<bool> = None;
         // ------------------------------
 
-        let result: Vec<(usize, char)> = self
-            .chars
-            .by_ref()
-            .skip_while(|&(_, c)| c.is_whitespace())
-            .take_while(|&(_, c)| {
-                let last_escape = escape;
-                match c {
-                    '\\' => {
-                        escape = true;
-                    }
-                    '\'' | '\"' => {
-                        if quote.is_none() {
-                            quote = Some(c);
-                        } else if quote.unwrap() == c {
-                            quote = None;
-                        }
-                    }
-                    c_ if c_.is_alphanumeric() => {
-                        escape = false;
-                        symbol = true;
-                    }
-                    _ => {
-                        escape = false;
+        let mut result = Vec::<(usize, char)>::new();
+        while self.chars.next_if(|&(_, c)| c.is_whitespace()).is_some() {
+            // simply remove all whitespaces
+        }
+        while let Some(&(_, c)) = self.chars.peek() {
+            let last_escape = escape;
+            let last_symbol = symbol;
+            match c {
+                '\\' => {
+                    escape = true;
+                }
+                '\'' | '\"' => {
+                    //todo
+                    escape = false;
+                    if quote.is_none() {
+                        quote = Some(c);
+                    } else if quote.unwrap() == c {
+                        quote = None;
                     }
                 }
-                return last_escape || quote.is_some() || !c.is_whitespace();
-            }).collect();
+                c_ if c_.is_alphanumeric() => {
+                    escape = false;
+                    if !last_escape {
+                        symbol = Some(false);
+                    }
+                    if last_symbol.unwrap_or(false) {
+                        break;
+                    }
+                }
+                c_ if c_.is_whitespace() => {
+                    escape = false;
+                }
+                _ => { // should be all symbols and control characters
+                    escape = false;
+                    if !last_escape {
+                        symbol = Some(true);
+                    }
+                    if !last_symbol.unwrap_or(true) {
+                        break;
+                    }
+                }
+            }
+            if last_escape || quote.is_some() || !c.is_whitespace() {
+                result.push(self.chars.next().unwrap());
+            } else {
+                break;
+            }
+        }
         if result.is_empty() {
             return None;
         }
@@ -85,6 +108,14 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn run() {
+        test_group("\\ a\\ b\\ c def", &[
+            ("\\ a\\ b\\ c", 0, 9),
+            ("def", 10, 3),
+        ]);
+    }
 
     fn test_group(source: &str, results: &[(&str, usize, usize)]) {
         let mut lex = Lexer::new(source);
@@ -135,6 +166,23 @@ mod tests {
         test_group("\"abc\\ \" \" def\"", &[
             ("\"abc\\ \"", 0, 7),
             ("\" def\"", 8, 6),
+        ]);
+        test_group("<a >", &[
+            ("<", 0, 1),
+            ("a", 1, 1),
+            (">", 3, 1),
+        ]);
+        test_group("< <<a <a<<ab > a>", &[
+            ("<", 0, 1),
+            ("<<", 2, 2),
+            ("a", 4, 1),
+            ("<", 6, 1),
+            ("a", 7, 1),
+            ("<<", 8, 2),
+            ("ab", 10, 2),
+            (">", 13, 1),
+            ("a", 15, 1),
+            (">", 16, 1),
         ]);
     }
 
