@@ -109,7 +109,7 @@ pub(crate) fn is_operator_begin(char: char) -> bool {
 }
 
 pub(crate) fn form_valid_operator(base: &str, char: char) -> bool {
-    OPERATORS.iter().any(|&operator| operator == format!("{}{}", base, char).as_str())
+    OPERATORS.iter().any(|&operator| operator.starts_with(format!("{}{}", base, char).as_str()))
 }
 
 pub(crate) fn is_valid_operator(str: &str) -> bool {
@@ -117,9 +117,7 @@ pub(crate) fn is_valid_operator(str: &str) -> bool {
 }
 
 pub(crate) fn form_valid_reserved_word(base: &str, char: char) -> bool {
-    RESERVED_WORD.iter().any(|&word| {
-        word == format!("{}{}", base, char).as_str()
-    })
+    RESERVED_WORD.iter().any(|&word| word.starts_with(format!("{}{}", base, char).as_str()))
 }
 
 pub(crate) fn is_valid_reserved_word(str: &str) -> bool {
