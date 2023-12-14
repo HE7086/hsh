@@ -1,6 +1,7 @@
 mod token;
 
 use std::iter::Peekable;
+use std::ops::Deref;
 use token::*;
 
 use std::str::CharIndices;
@@ -15,35 +16,39 @@ struct Token<'a> {
 
 #[derive(Debug)]
 struct LexerContext {
-    quoted: bool,
-    // current character is quoted
-    quote: char,
+    // previous character is backslash
+    escape: bool,
     // current quoting character
-    operator: bool,
+    quotes: Vec<char>,
     // previous character is part of an operator
-    comment: bool,   // current character is commented
+    operator: bool,
+    // current character is commented
+    comment: bool,
 }
 
 impl LexerContext {
     fn new() -> Self {
         Self {
-            quoted: false,
-            quote: '\0',
+            escape: false,
+            quotes: Vec::new(),
             operator: false,
             comment: false,
         }
     }
 
     fn reset(&mut self) {
-        self.quoted = false;
-        self.quote = '\0';
+        self.escape = false;
+        self.quotes.clear();
         self.operator = false;
         self.comment = false;
     }
 
-    fn lift_quote(&mut self) {
-        self.quoted = false;
-        self.quote = '\0';
+    fn quoted(&self) -> bool {
+        !self.quotes.is_empty()
+    }
+
+    fn quote(&self) -> char {
+        *self.quotes.last().unwrap()
     }
 }
 
@@ -60,10 +65,26 @@ impl<'a> Lexer<'a> {
             chars: source.char_indices().peekable(),
         }
     }
-}
 
-fn get_str(vec: &Vec<(usize, char)>) -> String {
-    vec.iter().map(|&(_, c)| c).collect::<String>()
+    fn get_str(&self, vec: &Vec<(usize, char)>) -> &'a str {
+        let start = vec.first().unwrap().0;
+        let last = vec.last().unwrap();
+        let end = last.0 + last.1.len_utf8();
+
+        self.source[start..end].as_ref()
+    }
+
+    fn get_token(&self, vec: &Vec<(usize, char)>) -> Token<'a> {
+        let start = vec.first().unwrap().0;
+        let last = vec.last().unwrap();
+        let length = last.0 + last.1.len_utf8() - start;
+
+        Token {
+            source: &self.source[start..start + length],
+            start,
+            length,
+        }
+    }
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -75,20 +96,20 @@ impl<'a> Iterator for Lexer<'a> {
         while self.chars.next_if(|&(_, c)| c.is_whitespace()).is_some() {}
         while let Some(&(_, c)) = self.chars.peek() {
             // If the end of input is recognized, the current token (if any) shall be delimited.
-            if ctx.operator && !ctx.quoted && form_valid_operator(get_str(&result).as_str(), c) {
+            if ctx.operator && !ctx.quoted() && form_valid_operator(self.get_str(&result), c) {
                 // If the previous character was used as part of an operator and the current character
                 // is not quoted and can be used with the previous characters to form an operator,
                 // it shall be used as part of that (operator) token.
                 result.push(self.chars.next().unwrap());
                 continue;
             }
-            if ctx.operator && !form_valid_operator(get_str(&result).as_str(), c) {
+            if ctx.operator && !form_valid_operator(self.get_str(&result), c) {
                 // If the previous character was used as part of an operator and
                 // the current character cannot be used with the previous characters to form an operator,
                 // the operator containing the previous character shall be delimited.
                 break;
             }
-            if ['\\', '\'', '"'].contains(&c) && !ctx.quoted {
+            if "\\'\"".contains(c) && !ctx.quoted() {
                 // If the current character is <backslash>, single-quote, or double-quote and it is not quoted,
                 // it shall affect quoting for subsequent characters up to the end of the quoted text.
                 // The rules for quoting are as described in Quoting.
@@ -98,18 +119,17 @@ impl<'a> Iterator for Lexer<'a> {
                 // including any embedded or enclosing quotes or substitution operators,
                 // between the <quotation-mark> and the end of the quoted text.
                 // The token shall not be delimited by the end of the quoted field.
-                ctx.quoted = true;
-                ctx.quote = c;
+                ctx.quotes.push(c);
                 result.push(self.chars.next().unwrap());
                 continue;
                 //todo
             }
-            if ['\\', '\'', '"'].contains(&c) && ctx.quoted && ctx.quote == c {
-                ctx.lift_quote();
+            if "\\'\"".contains(c) && ctx.quoted() && ctx.quote() == c {
+                ctx.quotes.pop();
                 result.push(self.chars.next().unwrap());
                 continue;
             }
-            if ['$', '`'].contains(&c) && !ctx.quoted {
+            if "$`".contains(c) && !ctx.quoted() {
                 // If the current character is an unquoted '$' or '`',
                 // the shell shall identify the start of any candidates
                 // for parameter expansion (Parameter Expansion),
@@ -130,7 +150,7 @@ impl<'a> Iterator for Lexer<'a> {
                 // TODO
                 continue;
             }
-            if is_operator_begin(c) && !ctx.quoted {
+            if is_operator_begin(c) && !ctx.quoted() {
                 // If the current character is not quoted and can be used as the first character of a new operator,
                 // the current token (if any) shall be delimited.
                 // The current character shall be used as the beginning of the next (operator) token.
@@ -142,7 +162,7 @@ impl<'a> Iterator for Lexer<'a> {
                     break;
                 }
             }
-            if c.is_whitespace() && !ctx.quoted {
+            if c.is_whitespace() && !ctx.quoted() {
                 // If the current character is an unquoted <blank>,
                 // any token containing the previous character is delimited
                 // and the current character shall be discarded.
@@ -153,8 +173,8 @@ impl<'a> Iterator for Lexer<'a> {
                 // If the previous character was part of a word,
                 // the current character shall be appended to that word.
                 result.push(self.chars.next().unwrap());
-                if ctx.quoted && ctx.quote == '\\' {
-                    ctx.lift_quote();
+                if ctx.quoted() && ctx.quote() == '\\' {
+                    ctx.quotes.pop();
                 }
                 continue;
             }
@@ -176,19 +196,7 @@ impl<'a> Iterator for Lexer<'a> {
             return None;
         }
 
-        let first = result.first().unwrap();
-        let last = result.last().unwrap();
-
-        let start = first.0;
-        let length = last.0 + last.1.len_utf8() - start;
-
-        Some(
-            Token {
-                source: &self.source[start..start + length],
-                start,
-                length,
-            }
-        )
+        Some(self.get_token(&result))
     }
 }
 
