@@ -4,6 +4,7 @@ use std::mem::variant_count;
 
 #[rustfmt::skip]
 pub(crate) enum Token {
+    // @formatter:off
     Word,
     AssignmentWord,
     Name,
@@ -46,6 +47,7 @@ pub(crate) enum Token {
     Rbrace, // }
     Bang,   // !
     In,     // in
+    // @formatter:on
 }
 
 pub(crate) const OPERATORS: [&str; 17] = [
@@ -59,6 +61,7 @@ pub(crate) const OPERATORS: [&str; 17] = [
     "<>",
     "<<-",
     ">|",
+    // are these operators?
     "&",
     "|",
     "(",
@@ -66,6 +69,16 @@ pub(crate) const OPERATORS: [&str; 17] = [
     ";",
     "<",
     ">",
+];
+
+pub(crate) const OPERATORS_BEGIN: [char; 7] = [
+    '&',
+    '|',
+    ';',
+    '<',
+    '>',
+    '(',
+    ')',
 ];
 
 const RESERVED_WORD: [&str; 20] = [
@@ -101,7 +114,6 @@ pub(crate) fn form_valid_operator(base: &str, char: char) -> bool {
 
 pub(crate) fn is_valid_operator(str: &str) -> bool {
     OPERATORS.iter().any(|&operator| operator == str)
-
 }
 
 pub(crate) fn form_valid_reserved_word(base: &str, char: char) -> bool {
@@ -112,4 +124,17 @@ pub(crate) fn form_valid_reserved_word(base: &str, char: char) -> bool {
 
 pub(crate) fn is_valid_reserved_word(str: &str) -> bool {
     RESERVED_WORD.iter().any(|&operator| operator == str)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use super::*;
+
+    #[test]
+    fn test_operators() {
+        let expected: HashSet<char> = OPERATORS.into_iter().map(|s| s.char_indices().next().unwrap().1).collect();
+        let actual: HashSet<char> = OPERATORS_BEGIN.into_iter().collect();
+        assert_eq!(actual, expected, "OPERATORS_BEGIN does not match all begins of OPERATORS");
+    }
 }
