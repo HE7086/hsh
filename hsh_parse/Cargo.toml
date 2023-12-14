@@ -1,5 +1,5 @@
 [package]
-name = "hsh-parse"
+name = "hsh_parse"
 version = "0.1.0"
 edition = "2021"
 

@@ -2,5 +2,5 @@
 resolver = "2"
 members = [
     "hsh",
-    "hsh-parse",
+    "hsh_parse",
 ]
