@@ -206,127 +206,133 @@ mod tests {
 
     #[test]
     fn run() {
-        test_group("a b c", &[
+        test_group_with_location("a b c", &[
             ("a", 0, 1),
             ("b", 2, 1),
             ("c", 4, 1),
         ]);
     }
 
-    fn test_group(source: &str, results: &[(&str, usize, usize)]) {
+    #[test]
+    fn test_with_location() {
+        test_group_with_location("a", &[
+            ("a", 0, 1),
+        ]);
+        test_group_with_location("a ", &[
+            ("a", 0, 1),
+        ]);
+        test_group_with_location(" a ", &[
+            ("a", 1, 1),
+        ]);
+        test_group_with_location("a b", &[
+            ("a", 0, 1),
+            ("b", 2, 1),
+        ]);
+        test_group_with_location("a  b", &[
+            ("a", 0, 1),
+            ("b", 3, 1),
+        ]);
+        test_group_with_location("a  b  ", &[
+            ("a", 0, 1),
+            ("b", 3, 1),
+        ]);
+        test_group_with_location("a b c", &[
+            ("a", 0, 1),
+            ("b", 2, 1),
+            ("c", 4, 1),
+        ]);
+        test_group_with_location("a bc def", &[
+            ("a", 0, 1),
+            ("bc", 2, 2),
+            ("def", 5, 3),
+        ]);
+        test_group_with_location(" a  bc   def", &[
+            ("a", 1, 1),
+            ("bc", 4, 2),
+            ("def", 9, 3),
+        ]);
+        test_group_with_location(" a \nbc  \ndef", &[
+            ("a", 1, 1),
+            ("bc", 4, 2),
+            ("def", 9, 3),
+        ]);
+        test_group_with_location(" 'a' 'bc def' \"123\"", &[
+            ("'a'", 1, 3),
+            ("'bc def'", 5, 8),
+            ("\"123\"", 14, 5),
+        ]);
+        test_group_with_location("测试 äöü ☺☺☺", &[
+            ("测试", 0, 6),
+            ("äöü", 7, 6),
+            ("☺☺☺", 14, 9),
+        ]);
+        test_group_with_location("<<|>>", &[
+            ("<<", 0, 2),
+            ("|", 2, 1),
+            (">>", 3, 2),
+        ]);
+        test_group_with_location("\\\n", &[
+            ("\\\n", 0, 2),
+        ]);
+        test_group_with_location("a\\\nb\nc", &[
+            ("a\\\nb", 0, 4),
+            ("c", 5, 1),
+        ]);
+    }
+
+    #[test]
+    fn test_normal() {
+        test_group("echo \"hello, world!\" | sed 's/hello/hi/g' | grep -o world >> output.txt 2>&1", &[
+            "echo",
+            "\"hello, world!\"",
+            "|",
+            "sed",
+            "'s/hello/hi/g'",
+            "|",
+            "grep",
+            "-o",
+            "world",
+            ">>",
+            "output.txt",
+            "2",
+            ">&",
+            "1"
+        ]);
+    }
+
+    #[test]
+    fn test_empty() {
+        assert!(Lexer::new("").next().is_none());
+        assert!(Lexer::new(" ").next().is_none());
+        assert!(Lexer::new("\t").next().is_none());
+        assert!(Lexer::new("\n").next().is_none());
+        assert!(Lexer::new(" \t \t").next().is_none());
+    }
+
+    fn test_group_with_location(source: &str, results: &[(&str, usize, usize)]) {
         let mut lex = Lexer::new(source);
 
         for &(char, start, length) in results {
             let token = lex.next();
-            assert!(token.as_ref().is_some());
-            assert_eq!(token.as_ref().unwrap().source, char);
-            assert_eq!(token.as_ref().unwrap().start, start);
-            assert_eq!(token.as_ref().unwrap().length, length);
+            assert!(token.is_some());
+
+            let token = token.unwrap();
+            assert_eq!(token.source, char);
+            assert_eq!(token.start, start);
+            assert_eq!(token.length, length);
         }
         let token = lex.next();
         assert!(token.is_none());
     }
 
-    #[test]
-    fn test1() {
-        // basic
-        test_group("a bc d efg", &[
-            ("a", 0, 1),
-            ("bc", 2, 2),
-            ("d", 5, 1),
-            ("efg", 7, 3),
-        ]);
-        // whitespaces
-        test_group("a    bc\n  d \t  efg \n\n", &[
-            ("a", 0, 1),
-            ("bc", 5, 2),
-            ("d", 10, 1),
-            ("efg", 15, 3),
-        ]);
-        // unicode
-        test_group("测试 äöü ☺☺☺☺", &[
-            ("测试", 0, 6),
-            ("äöü", 7, 6),
-            ("☺☺☺☺", 14, 12),
-        ]);
-        // escape
-        test_group("\\ a\\ b\\ c def", &[
-            ("\\ a\\ b\\ c", 0, 9),
-            ("def", 10, 3),
-        ]);
-        // quotes
-        test_group("\"abc\'\" def\'", &[
-            ("\"abc\'\"", 0, 6),
-            ("def\'", 7, 4),
-        ]);
-        test_group("\"abc\\ \" \" def\"", &[
-            ("\"abc\\ \"", 0, 7),
-            ("\" def\"", 8, 6),
-        ]);
-        test_group("<a >", &[
-            ("<", 0, 1),
-            ("a", 1, 1),
-            (">", 3, 1),
-        ]);
-        test_group("< <<a <a<<ab > a>", &[
-            ("<", 0, 1),
-            ("<<", 2, 2),
-            ("a", 4, 1),
-            ("<", 6, 1),
-            ("a", 7, 1),
-            ("<<", 8, 2),
-            ("ab", 10, 2),
-            (">", 13, 1),
-            ("a", 15, 1),
-            (">", 16, 1),
-        ]);
-    }
+    fn test_group(source: &str, results: &[&str]) {
+        let mut lex = Lexer::new(source);
 
-    // #[test]
-    // fn test2() {
-    //     test_group("echo \"hello, world!\" | sed 's/hello/hi/g' | grep -o world >> output.txt 2>&1", &[
-    //         ("echo", 0, 4),
-    //         ("\"hello, world!\"", 5, 15),
-    //         ("|", 21, 1),
-    //         ("sed", 23, 3),
-    //         ("'s/hello/hi/g'", 27, 14),
-    //         ("|", 42, 1),
-    //         ("grep", 44, 4),
-    //         ("-o", 49, 2),
-    //         ("world", 52, 5),
-    //         (">>", 0, 1),
-    //         ("output.txt", 0, 1),
-    //         ("2>&1", 0, 1),
-    //     ]);
-    // }
-
-    #[test]
-    fn test_one() {
-        let mut lex = Lexer::new("abcdefg");
-        let token = lex.next();
-        assert!(token.is_some());
-        assert_eq!(token.as_ref().unwrap().source, "abcdefg");
-        assert_eq!(token.as_ref().unwrap().start, 0);
-        assert_eq!(token.as_ref().unwrap().length, 7);
-    }
-
-    #[test]
-    fn test_empty() {
-        let mut lex = Lexer::new("");
-        assert!(lex.next().is_none());
-
-        let mut lex = Lexer::new("  \n   ");
-        assert!(lex.next().is_none());
-    }
-
-    #[test]
-    fn test_mixed() {
-        let mut lex = Lexer::new("\t \na\t \n");
-        let token = lex.next();
-        assert!(token.is_some());
-        assert_eq!(token.as_ref().unwrap().source, "a");
-        assert_eq!(token.as_ref().unwrap().start, 3);
-        assert_eq!(token.as_ref().unwrap().length, 1);
+        for &chars in results {
+            let token = lex.next();
+            assert!(token.is_some());
+            assert_eq!(token.unwrap().source, chars);
+        }
         assert!(lex.next().is_none());
     }
 }
