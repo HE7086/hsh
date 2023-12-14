@@ -1,11 +1,12 @@
-mod token;
-
 use std::iter::Peekable;
 use std::ops::Deref;
+use std::str::CharIndices;
+
+use itertools::Itertools;
+
 use token::*;
 
-use std::str::CharIndices;
-use itertools::{Itertools, MultiPeek};
+mod token;
 
 #[derive(Debug)]
 struct Token<'a> {
@@ -16,8 +17,6 @@ struct Token<'a> {
 
 #[derive(Debug)]
 struct LexerContext {
-    // previous character is backslash
-    escape: bool,
     // current quoting character
     quotes: Vec<char>,
     // previous character is part of an operator
@@ -29,7 +28,6 @@ struct LexerContext {
 impl LexerContext {
     fn new() -> Self {
         Self {
-            escape: false,
             quotes: Vec::new(),
             operator: false,
             comment: false,
@@ -37,7 +35,6 @@ impl LexerContext {
     }
 
     fn reset(&mut self) {
-        self.escape = false;
         self.quotes.clear();
         self.operator = false;
         self.comment = false;
@@ -100,7 +97,6 @@ impl<'a> Iterator for Lexer<'a> {
                     // If the previous character was used as part of an operator and the current character
                     // is not quoted and can be used with the previous characters to form an operator,
                     // it shall be used as part of that (operator) token.
-                    result.push(self.chars.next().unwrap());
                 }
                 _ if ctx.operator && !form_valid_operator(self.get_str(&result), c) => {
                     // If the previous character was used as part of an operator and
@@ -108,7 +104,7 @@ impl<'a> Iterator for Lexer<'a> {
                     // the operator containing the previous character shall be delimited.
                     break;
                 }
-                '\\' | '\'' | '"' if !ctx.quoted() => {
+                '\'' | '"' if !ctx.quoted() => {
                     // If the current character is <backslash>, single-quote, or double-quote and it is not quoted,
                     // it shall affect quoting for subsequent characters up to the end of the quoted text.
                     // The rules for quoting are as described in Quoting.
@@ -119,12 +115,15 @@ impl<'a> Iterator for Lexer<'a> {
                     // between the <quotation-mark> and the end of the quoted text.
                     // The token shall not be delimited by the end of the quoted field.
                     ctx.quotes.push(c);
-                    result.push(self.chars.next().unwrap());
-                    //todo
                 }
-                '\\' | '\'' | '"' if ctx.quoted() && ctx.quote() == c => {
+                '\'' | '"' if ctx.quoted() && ctx.quote() == c => {
                     ctx.quotes.pop();
+                }
+                '\\' if !ctx.quoted() => {
                     result.push(self.chars.next().unwrap());
+                    if self.chars.peek().is_none() {
+                        panic!("unmatched escape sequence");
+                    }
                 }
                 '$' | '`' if !ctx.quoted() => {
                     // If the current character is an unquoted '$' or '`',
@@ -150,29 +149,25 @@ impl<'a> Iterator for Lexer<'a> {
                     // If the current character is not quoted and can be used as the first character of a new operator,
                     // the current token (if any) shall be delimited.
                     // The current character shall be used as the beginning of the next (operator) token.
-                    if result.is_empty() {
-                        ctx.operator = true;
-                        result.push(self.chars.next().unwrap());
-                    } else {
+                    if !result.is_empty() {
                         break;
                     }
+                    ctx.operator = true;
                 }
                 _ if c.is_whitespace() && !ctx.quoted() => {
                     // If the current character is an unquoted <blank>,
                     // any token containing the previous character is delimited
                     // and the current character shall be discarded.
                     self.chars.next();
-                    if !result.is_empty() {
+                    if result.is_empty() {
+                        continue;
+                    } else {
                         break;
                     }
                 }
                 _ if !result.is_empty() => {
                     // If the previous character was part of a word,
                     // the current character shall be appended to that word.
-                    result.push(self.chars.next().unwrap());
-                    if ctx.quoted() && ctx.quote() == '\\' {
-                        ctx.quotes.pop();
-                    }
                 }
                 '#' => {
                     // If the current character is a '#', it and all subsequent characters up to,
@@ -180,13 +175,13 @@ impl<'a> Iterator for Lexer<'a> {
                     // The <newline> that ends the line is not considered part of the comment.
                     ctx.comment = true;
                     while self.chars.next_if(|&(_, c)| c != '\n').is_some() {}
+                    continue;
                 }
                 _ => {
                     // The current character is used as the start of a new word.
-                    debug_assert!(result.is_empty());
-                    result.push(self.chars.next().unwrap());
                 }
             }
+            result.push(self.chars.next().unwrap());
         }
         if result.is_empty() {
             return None;
@@ -267,6 +262,11 @@ mod tests {
             ("|", 2, 1),
             (">>", 3, 2),
         ]);
+        test_group_with_location("1>2", &[
+            ("1", 0, 1),
+            (">", 1, 1),
+            ("2", 2, 1),
+        ]);
         test_group_with_location("\\\n", &[
             ("\\\n", 0, 2),
         ]);
@@ -274,6 +274,24 @@ mod tests {
             ("a\\\nb", 0, 4),
             ("c", 5, 1),
         ]);
+        test_group_with_location("a#b #c\nd", &[
+            ("a#b", 0, 3),
+            ("d", 7, 1),
+        ]);
+    }
+
+    #[test]
+    fn test_quote() {
+        test_group("'\"\"'", &["'\"\"'"]);
+        test_group("\"''\"", &["\"''\""]);
+        test_group("\"\\\"\\\"\"", &["\"\\\"\\\"\""]);
+        test_group("a\\ b c\\\nd", &["a\\ b", "c\\\nd"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "unmatched escape sequence")]
+    fn test_invalid_quote() {
+       Lexer::new("\\").next();
     }
 
     #[test]
@@ -298,6 +316,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
+        test_group("", &[]);
         assert!(Lexer::new("").next().is_none());
         assert!(Lexer::new(" ").next().is_none());
         assert!(Lexer::new("\t").next().is_none());
