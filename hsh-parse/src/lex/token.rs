@@ -2,7 +2,8 @@ use std::mem::variant_count;
 
 // https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html
 
-enum Token {
+#[rustfmt::skip]
+pub(crate) enum Token {
     Word,
     AssignmentWord,
     Name,
@@ -47,7 +48,7 @@ enum Token {
     In,     // in
 }
 
-const OPERATORS: [&str; 17] = [
+pub(crate) const OPERATORS: [&str; 17] = [
     "&&",
     "||",
     ";;",
@@ -90,22 +91,25 @@ const RESERVED_WORD: [&str; 20] = [
     "select",
 ];
 
-
-fn form_valid_operator(base: &str, char: char) -> bool {
-    OPERATORS.iter().any(|operator| operator == format!("{}{}", base, char))
+pub(crate) fn is_operator_begin(char: char) -> bool {
+    OPERATORS.iter().any(|&operator| operator.starts_with(char))
 }
 
-fn is_valid_operator(str: &str) -> bool {
-    OPERATORS.iter().any(|operator| operator == str)
+pub(crate) fn form_valid_operator(base: &str, char: char) -> bool {
+    OPERATORS.iter().any(|&operator| operator == format!("{}{}", base, char).as_str())
+}
+
+pub(crate) fn is_valid_operator(str: &str) -> bool {
+    OPERATORS.iter().any(|&operator| operator == str)
 
 }
 
-fn form_valid_reserved_word(base: &str, char: char) -> bool {
-    RESERVED_WORD.iter().any(|word| {
-        word == format!("{}{}", base, char)
+pub(crate) fn form_valid_reserved_word(base: &str, char: char) -> bool {
+    RESERVED_WORD.iter().any(|&word| {
+        word == format!("{}{}", base, char).as_str()
     })
 }
 
-fn is_valid_reserved_word(str: &str) -> bool {
-    RESERVED_WORD.iter().any(|operator| operator == str)
+pub(crate) fn is_valid_reserved_word(str: &str) -> bool {
+    RESERVED_WORD.iter().any(|&operator| operator == str)
 }
