@@ -5,7 +5,6 @@ use std::str::CharIndices;
 use itertools::Itertools;
 
 use token::*;
-use crate::lex::LexerError::{EndOfText, UnmatchedEscapeSequence};
 
 mod token;
 
@@ -21,6 +20,8 @@ struct Token {
 struct LexerContext {
     // current quoting character
     quotes: Vec<char>,
+    // current brackets/parentheses etc.
+    brackets: Vec<char>,
     // previous character is part of an operator
     operator: bool,
     // current character is commented
@@ -31,15 +32,10 @@ impl LexerContext {
     fn new() -> Self {
         Self {
             quotes: Vec::new(),
+            brackets: Vec::new(),
             operator: false,
             comment: false,
         }
-    }
-
-    fn reset(&mut self) {
-        self.quotes.clear();
-        self.operator = false;
-        self.comment = false;
     }
 
     fn quoted(&self) -> bool {
@@ -54,7 +50,9 @@ impl LexerContext {
 #[derive(Debug, PartialEq)]
 enum LexerError {
     EndOfText,
-    UnmatchedEscapeSequence,
+
+    // actually an error, allocation is fine
+    UnexpectedEOF(String),
 }
 
 #[derive(Debug)]
@@ -64,7 +62,7 @@ struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    fn new(source: &'a str) -> Self {
+    pub fn new(source: &'a str) -> Self {
         Self {
             source,
             chars: source.char_indices().peekable(),
@@ -109,7 +107,7 @@ impl<'a> Lexer<'a> {
                     // the operator containing the previous character shall be delimited.
                     break;
                 }
-                '\'' | '"' if !ctx.quoted() => {
+                '\'' | '"' | '`' if !ctx.quoted() => {
                     // If the current character is <backslash>, single-quote, or double-quote and it is not quoted,
                     // it shall affect quoting for subsequent characters up to the end of the quoted text.
                     // The rules for quoting are as described in Quoting.
@@ -121,10 +119,10 @@ impl<'a> Lexer<'a> {
                     // The token shall not be delimited by the end of the quoted field.
                     ctx.quotes.push(c);
                 }
-                '\'' | '"' if ctx.quoted() && ctx.quote() == c => {
+                '\'' | '"' | '`' if ctx.quote() == c => {
                     ctx.quotes.pop();
                 }
-                '\\' if !ctx.quoted() => {
+                '\\' /* if !ctx.quoted() */ => {
                     // A <backslash> that is not quoted shall preserve the literal value of the following character,
                     // with the exception of a <newline>. If a <newline> follows the <backslash>,
                     // the shell shall interpret this as line continuation.
@@ -141,11 +139,11 @@ impl<'a> Lexer<'a> {
                             result.push(backslash);
                         }
                         None => {
-                            return Err(UnmatchedEscapeSequence);
+                            return Err(LexerError::UnexpectedEOF("\\".to_string()));
                         }
                     }
                 }
-                '$' | '`' if !ctx.quoted() => {
+                '$' if !ctx.quoted() => {
                     // If the current character is an unquoted '$' or '`',
                     // the shell shall identify the start of any candidates
                     // for parameter expansion (Parameter Expansion),
@@ -164,6 +162,12 @@ impl<'a> Lexer<'a> {
                     // The token shall not be delimited by the end of the substitution.
 
                     // TODO
+                }
+                '('  if !ctx.quoted()  => {
+                    ctx.quotes.push(c);
+                }
+                ')' if ctx.quoted() && ctx.quote() == '(' => {
+                    ctx.quotes.pop();
                 }
                 _ if is_operator_begin(c) && !ctx.quoted() => {
                     // If the current character is not quoted and can be used as the first character of a new operator,
@@ -203,8 +207,11 @@ impl<'a> Lexer<'a> {
             }
             result.push(self.chars.next().unwrap());
         }
+        if ctx.quoted() {
+            return Err(LexerError::UnexpectedEOF(ctx.quotes.iter().collect()));
+        }
         if result.is_empty() {
-            Err(EndOfText)
+            Err(LexerError::EndOfText)
         } else {
             Ok(self.get_token(&result))
         }
@@ -217,14 +224,12 @@ mod tests {
 
     #[test]
     fn run() {
-        test_group_with_location("a\\\nb\nc", &[
-            ("ab", 0, 4),
-            ("c", 5, 1),
-        ]);
+        test_group("$(())", &["$(())"]);
     }
 
     #[test]
     fn test_with_location() {
+        test_group_with_location("", &[]);
         test_group_with_location("a", &[
             ("a", 0, 1),
         ]);
@@ -294,6 +299,29 @@ mod tests {
             ("a#b", 0, 3),
             ("d", 7, 1),
         ]);
+        test_group_with_location("``", &[
+            ("``", 0, 2),
+        ]);
+        test_group_with_location("()", &[
+            ("()", 0, 2),
+        ]);
+        test_group_with_location("`a b` a(a b)b", &[
+            ("`a b`", 0, 5),
+            ("a(a b)b", 6, 7),
+        ]);
+        test_group_with_location("$", &[
+            ("$", 0, 1),
+        ]);
+        test_group_with_location("${} $() $(())", &[
+            ("${}", 0, 3),
+            ("$()", 4, 3),
+            ("$(())", 8, 5),
+        ]);
+    }
+
+    #[test]
+    fn test_tokens() {
+        test_group("'('", &["'('"]);
     }
 
     #[test]
@@ -308,7 +336,7 @@ mod tests {
     fn test_invalid_quote() {
         let token = Lexer::new("\\").next();
         assert!(token.is_err());
-        assert_eq!(token.unwrap_err(), UnmatchedEscapeSequence);
+        assert_eq!(token.unwrap_err(), LexerError::UnexpectedEOF("\\".to_string()));
     }
 
     #[test]
@@ -355,7 +383,7 @@ mod tests {
         }
         let token = lex.next();
         assert!(token.is_err());
-        assert_eq!(token.unwrap_err(), EndOfText);
+        assert_eq!(token.unwrap_err(), LexerError::EndOfText);
     }
 
     fn test_group(source: &str, results: &[&str]) {
@@ -368,6 +396,6 @@ mod tests {
         }
         let token = lex.next();
         assert!(token.is_err());
-        assert_eq!(token.unwrap_err(), EndOfText);
+        assert_eq!(token.unwrap_err(), LexerError::EndOfText);
     }
 }
