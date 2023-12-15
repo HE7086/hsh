@@ -5,6 +5,7 @@ use std::str::CharIndices;
 use itertools::Itertools;
 
 use token::*;
+use crate::lex::LexerError::{EndOfText, UnmatchedEscapeSequence};
 
 mod token;
 
@@ -50,6 +51,12 @@ impl LexerContext {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum LexerError {
+    EndOfText,
+    UnmatchedEscapeSequence,
+}
+
 #[derive(Debug)]
 struct Lexer<'a> {
     source: &'a str,
@@ -84,12 +91,8 @@ impl<'a> Lexer<'a> {
             length,
         }
     }
-}
 
-impl<'a> Iterator for Lexer<'a> {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Result<Token, LexerError> {
         let mut ctx = LexerContext::new();
         let mut result = Vec::<(usize, char)>::new();
         while let Some(&(_, c)) = self.chars.peek() {
@@ -138,7 +141,7 @@ impl<'a> Iterator for Lexer<'a> {
                             result.push(backslash);
                         }
                         None => {
-                            panic!("unmatched escape sequence");
+                            return Err(UnmatchedEscapeSequence);
                         }
                     }
                 }
@@ -201,10 +204,10 @@ impl<'a> Iterator for Lexer<'a> {
             result.push(self.chars.next().unwrap());
         }
         if result.is_empty() {
-            return None;
+            Err(EndOfText)
+        } else {
+            Ok(self.get_token(&result))
         }
-
-        Some(self.get_token(&result))
     }
 }
 
@@ -302,9 +305,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "unmatched escape sequence")]
     fn test_invalid_quote() {
-       Lexer::new("\\").next();
+        let token = Lexer::new("\\").next();
+        assert!(token.is_err());
+        assert_eq!(token.unwrap_err(), UnmatchedEscapeSequence);
     }
 
     #[test]
@@ -330,12 +334,11 @@ mod tests {
     #[test]
     fn test_empty() {
         test_group("", &[]);
-        assert!(Lexer::new("").next().is_none());
-        assert!(Lexer::new(" ").next().is_none());
-        assert!(Lexer::new("\t").next().is_none());
-        assert!(Lexer::new("\n").next().is_none());
-        assert!(Lexer::new(" \t \t").next().is_none());
-        assert!(Lexer::new("\\\n").next().is_none());
+        test_group(" ", &[]);
+        test_group("\t", &[]);
+        test_group("\n", &[]);
+        test_group(" \t \t", &[]);
+        test_group("\\\n", &[]);
     }
 
     fn test_group_with_location(source: &str, results: &[(&str, usize, usize)]) {
@@ -343,7 +346,7 @@ mod tests {
 
         for &(char, start, length) in results {
             let token = lex.next();
-            assert!(token.is_some());
+            assert!(token.is_ok());
 
             let token = token.unwrap();
             assert_eq!(token.source.as_str(), char);
@@ -351,7 +354,8 @@ mod tests {
             assert_eq!(token.length, length);
         }
         let token = lex.next();
-        assert!(token.is_none());
+        assert!(token.is_err());
+        assert_eq!(token.unwrap_err(), EndOfText);
     }
 
     fn test_group(source: &str, results: &[&str]) {
@@ -359,9 +363,11 @@ mod tests {
 
         for &chars in results {
             let token = lex.next();
-            assert!(token.is_some());
+            assert!(token.is_ok());
             assert_eq!(token.unwrap().source.as_str(), chars);
         }
-        assert!(lex.next().is_none());
+        let token = lex.next();
+        assert!(token.is_err());
+        assert_eq!(token.unwrap_err(), EndOfText);
     }
 }
