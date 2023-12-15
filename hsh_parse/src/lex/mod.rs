@@ -9,8 +9,9 @@ use token::*;
 mod token;
 
 #[derive(Debug)]
-struct Token<'a> {
-    source: &'a str,
+struct Token {
+    // because '\\\n' is discarded while lexing, we cannot simply use &str to the source
+    source: String,
     start: usize,
     length: usize,
 }
@@ -71,13 +72,14 @@ impl<'a> Lexer<'a> {
         self.source[start..end].as_ref()
     }
 
-    fn get_token(&self, vec: &Vec<(usize, char)>) -> Token<'a> {
+    fn get_token(&self, vec: &Vec<(usize, char)>) -> Token {
         let start = vec.first().unwrap().0;
         let last = vec.last().unwrap();
         let length = last.0 + last.1.len_utf8() - start;
+        let mut string = vec.iter().map(|&(_, c)| c).collect();
 
         Token {
-            source: &self.source[start..start + length],
+            source: string,
             start,
             length,
         }
@@ -85,7 +87,7 @@ impl<'a> Lexer<'a> {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Token<'a>;
+    type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut ctx = LexerContext::new();
@@ -120,9 +122,24 @@ impl<'a> Iterator for Lexer<'a> {
                     ctx.quotes.pop();
                 }
                 '\\' if !ctx.quoted() => {
-                    result.push(self.chars.next().unwrap());
-                    if self.chars.peek().is_none() {
-                        panic!("unmatched escape sequence");
+                    // A <backslash> that is not quoted shall preserve the literal value of the following character,
+                    // with the exception of a <newline>. If a <newline> follows the <backslash>,
+                    // the shell shall interpret this as line continuation.
+                    // The <backslash> and <newline> shall be removed before splitting the input into tokens.
+                    // Since the escaped <newline> is removed entirely from the input
+                    // and is not replaced by any white space, it cannot serve as a token separator.
+                    let backslash = self.chars.next().unwrap();
+                    match self.chars.peek() {
+                        Some((_, '\n')) => {
+                            self.chars.next();
+                            continue;
+                        }
+                        Some(_) => {
+                            result.push(backslash);
+                        }
+                        None => {
+                            panic!("unmatched escape sequence");
+                        }
                     }
                 }
                 '$' | '`' if !ctx.quoted() => {
@@ -197,10 +214,9 @@ mod tests {
 
     #[test]
     fn run() {
-        test_group_with_location("a b c", &[
-            ("a", 0, 1),
-            ("b", 2, 1),
-            ("c", 4, 1),
+        test_group_with_location("a\\\nb\nc", &[
+            ("ab", 0, 4),
+            ("c", 5, 1),
         ]);
     }
 
@@ -267,11 +283,8 @@ mod tests {
             (">", 1, 1),
             ("2", 2, 1),
         ]);
-        test_group_with_location("\\\n", &[
-            ("\\\n", 0, 2),
-        ]);
         test_group_with_location("a\\\nb\nc", &[
-            ("a\\\nb", 0, 4),
+            ("ab", 0, 4),
             ("c", 5, 1),
         ]);
         test_group_with_location("a#b #c\nd", &[
@@ -285,7 +298,7 @@ mod tests {
         test_group("'\"\"'", &["'\"\"'"]);
         test_group("\"''\"", &["\"''\""]);
         test_group("\"\\\"\\\"\"", &["\"\\\"\\\"\""]);
-        test_group("a\\ b c\\\nd", &["a\\ b", "c\\\nd"]);
+        test_group("a\\ b c\\\nd", &["a\\ b", "cd"]);
     }
 
     #[test]
@@ -322,6 +335,7 @@ mod tests {
         assert!(Lexer::new("\t").next().is_none());
         assert!(Lexer::new("\n").next().is_none());
         assert!(Lexer::new(" \t \t").next().is_none());
+        assert!(Lexer::new("\\\n").next().is_none());
     }
 
     fn test_group_with_location(source: &str, results: &[(&str, usize, usize)]) {
@@ -332,7 +346,7 @@ mod tests {
             assert!(token.is_some());
 
             let token = token.unwrap();
-            assert_eq!(token.source, char);
+            assert_eq!(token.source.as_str(), char);
             assert_eq!(token.start, start);
             assert_eq!(token.length, length);
         }
@@ -346,7 +360,7 @@ mod tests {
         for &chars in results {
             let token = lex.next();
             assert!(token.is_some());
-            assert_eq!(token.unwrap().source, chars);
+            assert_eq!(token.unwrap().source.as_str(), chars);
         }
         assert!(lex.next().is_none());
     }
