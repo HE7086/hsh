@@ -1,5 +1,3 @@
-use std::mem::variant_count;
-
 // https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html
 
 #[rustfmt::skip]
