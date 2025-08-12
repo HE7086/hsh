@@ -1,0 +1,159 @@
+AccessModifierOffset: -2
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveTableGenCondOperatorColons: Consecutive
+AlignConsecutiveTableGenDefinitionColons: Consecutive
+AlignEscapedNewlines: LeftWithLastLine
+AlignOperands: AlignAfterOperator
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseExpressionOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AllowShortNamespacesOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: true
+BinPackArguments: true
+# BinPackLongBracedList: true #21
+BinPackParameters: OnePerLine
+BitFieldColonSpacing: Both
+BreakAdjacentStringLiterals: true
+BreakAfterAttributes: Leave
+BreakAfterReturnType: Automatic
+BreakArrays: false
+BreakBeforeBinaryOperators: None #?
+BreakBeforeBraces: Attach
+BreakBeforeConceptDeclarations: Always
+BreakBeforeInlineASMColon: OnlyMultiline
+# BreakBeforeTemplateCloser: true #21
+BreakBeforeTernaryOperators: true
+BreakBinaryOperations: RespectPrecedence
+BreakConstructorInitializers: BeforeComma
+BreakFunctionDefinitionParameters: false
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: true
+BreakTemplateDeclarations: Yes
+ColumnLimit: 120
+# CommentPragmas: ""
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+DisableFormat: false
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: Always
+# EnumTrailingComma: Remove #21
+ExperimentalAutoDetectBinPacking: true # experimental since 3.7
+FixNamespaceComments: true
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex:    '^"'
+    Priority: 1
+  - Regex:    '^<.*\.h[^.]*>'
+    Priority: 3
+  - Regex:    '^<'
+    Priority: 2
+  - Regex:    '.\*'
+    Priority: 4
+IncludeIsMainRegex: '(_test)?$'
+IncludeIsMainSourceRegex: '(\.h[^.]*)$'
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: true
+IndentExportBlock: true
+IndentExternBlock: Indent
+IndentGotoLabels: false
+IndentPPDirectives: AfterHash
+IndentRequiresClause: true
+IndentWidth: 2
+IndentWrappedFunctionNames: false
+InsertNewlineAtEOF: true
+InsertTrailingCommas: None
+IntegerLiteralSeparator:
+  Binary: 0
+  Decimal: 0
+  Hex: 0
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+KeepFormFeed: false
+LambdaBodyIndentation: Signature
+Language: Cpp
+LineEnding: LF
+MainIncludeChar: Quote
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: None
+# OneLineFormatOffRegex: // NOLINTNEXTLINE #21
+PPIndentWidth: 2
+PackConstructorInitializers: NextLineOnly
+PenaltyBreakAssignment: 50
+PenaltyBreakBeforeFirstCallParameter: 50
+PenaltyBreakBeforeMemberAccess: 50
+PenaltyBreakComment: 50
+PenaltyBreakFirstLessLess: 50
+PenaltyBreakOpenParenthesis: 50
+PenaltyBreakScopeResolution: 50
+PenaltyBreakString: 50
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 100
+PenaltyIndentedWhitespace: 10
+PenaltyReturnTypeOnItsOwnLine: 50
+PointerAlignment: Left
+QualifierAlignment: Custom
+QualifierOrder: ['friend', 'static', 'constexpr', 'inline', 'volatile', 'restrict', 'type', 'const']
+ReferenceAlignment: Left
+ReflowComments: IndentOnly
+RemoveEmptyLinesInUnwrappedLines: true
+RemoveParentheses: Leave
+RemoveSemicolon: true
+RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
+SeparateDefinitionBlocks: Leave
+ShortNamespaceLines: 0
+SkipMacroDefinitionBody: true
+SortIncludes: true
+  # Enabled: true
+  # IgnoreCase: false
+SortUsingDeclarations: Lexicographic
+SpaceAfterCStyleCast: true
+SpaceAfterLogicalNot: false
+# SpaceAfterOperatorKeyword: false #21
+SpaceAfterTemplateKeyword: false
+SpaceAroundPointerQualifiers: Before
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeJsonColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+Standard: Latest
+TabWidth: 4
+UseTab: Never
+WrapNamespaceBodyWithEmptyLines: Always
+...

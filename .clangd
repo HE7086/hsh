@@ -1,0 +1,6 @@
+CompileFlags:
+  Remove: [ -fdeps-format=*, -fmodule-mapper=*, -fmodules-ts ]
+
+Diagnostics:
+  ClangTidy:
+    UseBuildDir: Yes

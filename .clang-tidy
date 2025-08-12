@@ -1,0 +1,74 @@
+Checks: >
+  *,
+  -altera-*,
+  -boost-*,
+  -cert-*,
+  -cppcoreguidelines-pro-*,
+  -fuchsia-*,
+  -google-*,
+  -hicpp-*,
+  -llvm-*,
+  -llvmlibc-*,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-named-parameter,
+  -misc-no-recursion,
+  -modernize-use-designated-initializers,
+  -concurrency-mt-unsafe,
+  -performance-enum-size,
+
+CheckOptions:
+  - key:             readability-identifier-naming.NamespaceCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ClassCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.StructCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.UnionCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.ConceptCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.FunctionCase
+    value:           camelBack
+  - key:             readability-identifier-naming.MethodCase
+    value:           camelBack
+  - key:             readability-identifier-naming.VariableCase
+    value:           lower_case
+  - key:             readability-identifier-naming.MemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.MemberSuffix
+    value:           _
+  - key:             readability-identifier-naming.ParameterCase
+    value:           lower_case
+  - key:             readability-identifier-naming.TypeAliasCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.EnumCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.EnumConstantCase
+    value:           UpperCamelCase
+  - key:             readability-identifier-naming.ConstantCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.ConstantMemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ConstantMemberSuffix
+    value:           _
+  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
+    value:           1
+
+  - key:             readability-identifier-length.MinimumVariableNameLength
+    value:           0
+  - key:             readability-identifier-length.MinimumParameterNameLength
+    value:           0
+  - key:             readability-identifier-length.MinimumExceptionNameLength
+    value:           0
+  - key:             readability-identifier-length.MinimumLoopCounterNameLength
+    value:           0
+
+  - key:             readability-function-cognitive-complexity.Threshold
+    value:           100
+
+HeaderFilterRegex: '.*'
+FormatStyle: 'file'
+ExtraArgs:
+  - -std=c++26

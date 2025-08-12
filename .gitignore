@@ -1,0 +1,11 @@
+.cache/
+build/
+cmake-build-*/
+bin/
+.idea/
+compile_commands.json
+.gdb_history
+
+AGENTS.md
+CLAUDE.md
+GEMINI.md
