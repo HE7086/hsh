@@ -31,4 +31,4 @@ void echo(std::span<std::string> args, int& last_status) {
   last_status = 0;
 }
 
-} // namespace hsh
+} // namespace hsh::builtin

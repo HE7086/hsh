@@ -77,7 +77,7 @@ class Tilde : public ::testing::TestWithParam<TildeCase> {};
 
 TEST_P(Tilde, Test) {
   auto const& [input, expected] = GetParam();
-  auto actual = hsh::expandTilde(input);
+  auto actual                   = hsh::expandTilde(input);
   if (expected) {
     ASSERT_TRUE(actual);
     EXPECT_EQ(*actual, *expected);

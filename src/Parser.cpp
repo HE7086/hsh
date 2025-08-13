@@ -381,7 +381,8 @@ Result<IfClause> Parser::parseIfClause() {
     if (!et) {
       return std::unexpected(et.error());
     }
-    ic.elif_parts_.emplace_back(std::make_unique<CommandList>(std::move(*ec)), std::make_unique<CommandList>(std::move(*et)));
+    ic.elif_parts_
+        .emplace_back(std::make_unique<CommandList>(std::move(*ec)), std::make_unique<CommandList>(std::move(*et)));
   }
   if (tryConsume<ElseToken>()) {
     consumeLinebreak();

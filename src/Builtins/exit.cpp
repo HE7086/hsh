@@ -19,4 +19,4 @@ namespace hsh::builtin {
   std::exit(code);
 }
 
-} // namespace hsh
+} // namespace hsh::builtin

@@ -19,9 +19,14 @@
 
 namespace {
 
-std::vector<char const*> toArgv(std::span<std::string> args) {
-  return std::views::concat(args | std::views::transform(&std::string::c_str), std::views::single(nullptr)) |
-         std::ranges::to<std::vector>();
+std::vector<char*> toArgv(std::span<std::string> args) {
+  std::vector<char*> argv;
+  argv.reserve(args.size() + 1);
+  for (auto& arg : args) {
+    argv.push_back(arg.data());
+  }
+  argv.push_back(nullptr);
+  return argv;
 }
 
 } // namespace
@@ -85,7 +90,7 @@ int runPipeline(std::span<std::vector<std::string>> commands) {
         }
       }
       auto argv = toArgv(args);
-      execvp(argv[0], const_cast<char* const*>(argv.data()));
+      execvp(argv[0], argv.data());
       fmt::print(stderr, "{}: {}\n", argv[0], std::strerror(errno));
       std::exit(errno == ENOENT ? 127 : 126);
     }

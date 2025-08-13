@@ -162,10 +162,10 @@ TEST(Builtins, AliasPrintsWithEscapedSingleQuotes) {
 }
 
 TEST(Builtins, AliasDefineWithoutQuotesDoesNotSpanArgs) {
-  using testing::internal::CaptureStdout;
-  using testing::internal::GetCapturedStdout;
   using testing::internal::CaptureStderr;
+  using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStderr;
+  using testing::internal::GetCapturedStdout;
 
   int                      last_status = 0;
   std::vector<std::string> def         = {"alias", "l=ls", "-la"};
