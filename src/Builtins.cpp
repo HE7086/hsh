@@ -11,6 +11,7 @@ bool handleBuiltin(std::span<std::string> args, int& last_status) {
   }
   if (args[0] == "exit") {
     builtin::exit(args);
+    return true;
   }
   if (args[0] == "cd") {
     builtin::cd(args, last_status);

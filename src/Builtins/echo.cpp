@@ -13,7 +13,7 @@ void echo(std::span<std::string> args, int& last_status) {
   // Support -n (may be repeated) to suppress the trailing newline.
   bool   newline = true;
   size_t i       = 1;
-  while (i < args.size() && args[i].starts_with("-n") && args[i].find_first_not_of('n', 1) == std::string::npos) {
+  while (i < args.size() && args[i] == "-n") {
     newline = false;
     ++i;
   }

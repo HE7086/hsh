@@ -249,3 +249,40 @@ TEST(Builtins, UnaliasUnknown) {
   EXPECT_NE(err.find("unalias: __nosuch__: not found\n"), std::string::npos);
   EXPECT_NE(last_status, 0);
 }
+
+// Tests for bug fixes
+
+TEST(Builtins, ExitReturnsTrue) {
+  // Test that exit builtin is properly handled (fixes missing return bug)
+  std::vector<std::string> args = {"exit", "0"};
+  int last_status = 0;
+  EXPECT_EXIT(hsh::handleBuiltin(args, last_status), ::testing::ExitedWithCode(0), "");
+}
+
+TEST(Builtins, EchoInvalidOption) {
+  // Test that echo only accepts exact "-n" option (fixes option parsing bug)
+  using testing::internal::CaptureStdout;
+  using testing::internal::GetCapturedStdout;
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"echo", "-nn", "test"};
+  CaptureStdout();
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  std::string output = GetCapturedStdout();
+  EXPECT_EQ(output, "-nn test\n"); // -nn should be treated as argument, not option
+  EXPECT_EQ(last_status, 0);
+}
+
+TEST(Builtins, EchoValidNOption) {
+  // Test that echo accepts repeated "-n" options
+  using testing::internal::CaptureStdout;
+  using testing::internal::GetCapturedStdout;
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"echo", "-n", "-n", "test"};
+  CaptureStdout();
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  std::string output = GetCapturedStdout();
+  EXPECT_EQ(output, "test"); // No newline due to -n
+  EXPECT_EQ(last_status, 0);
+}

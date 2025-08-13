@@ -192,3 +192,27 @@ TEST(Lexer, LessAndGreatAnd) {
   EXPECT_EQ(w->text_, "4");
   EXPECT_TRUE(toks[4].is<EndToken>());
 }
+
+// Tests for bug fixes
+
+TEST(Lexer, TrailingBackslash) {
+  // Test that trailing backslash is preserved (fixes escape handling bug)
+  auto toks = lexAll("test\\");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "test\\");
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}
+
+TEST(Lexer, EscapeInMiddle) {
+  // Test that escapes in the middle still work correctly
+  auto toks = lexAll("test\\nvalue");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "testnvalue"); // backslash-n becomes just n
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}

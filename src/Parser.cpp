@@ -38,6 +38,11 @@ Result<Program> Parser::parseProgram() {
 }
 
 Token const& Parser::peek(size_t offset) const {
+  if (tokens_.empty()) {
+    static EndToken end_token;
+    static Token end{Token::Kind{end_token}, 0};
+    return end;
+  }
   return tokens_[std::min(pos_ + offset, tokens_.size() - 1)];
 }
 Token const& Parser::consume() {

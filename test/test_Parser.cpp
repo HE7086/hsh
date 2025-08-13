@@ -256,3 +256,20 @@ TEST(Parser, IfWhileForCaseAndRedirections) {
     EXPECT_EQ(sc.redirects_[2].target_.text_, "in");
   }
 }
+
+// Tests for bug fixes
+
+TEST(Parser, EmptyTokenList) {
+  // Test that parser handles empty token list gracefully (fixes bounds checking bug)
+  hsh::Parser parser(std::vector<hsh::Token>{});
+  auto result = parser.parseProgram();
+  // Should not crash and should handle gracefully
+  EXPECT_TRUE(result.has_value());
+}
+
+TEST(Parser, EmptyInput) {
+  // Test that empty input parses correctly
+  auto result = hsh::parse("");
+  EXPECT_TRUE(result.has_value());
+  // Empty input should parse to valid program structure
+}

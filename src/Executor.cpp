@@ -68,13 +68,13 @@ int runPipeline(std::span<std::vector<std::string>> commands) {
       setChildSignals();
 
       if (prev_read_fd.get() != -1) {
-        if (dup3(prev_read_fd.get(), STDIN_FILENO, O_CLOEXEC) < 0) {
+        if (dup2(prev_read_fd.get(), STDIN_FILENO) < 0) {
           fmt::print(stderr, "dup2 stdin: {}\n", std::strerror(errno));
           std::exit(1);
         }
       }
       if (write_fd.get() != -1) {
-        if (dup3(write_fd.get(), STDOUT_FILENO, O_CLOEXEC) < 0) {
+        if (dup2(write_fd.get(), STDOUT_FILENO) < 0) {
           fmt::print(stderr, "dup2 stdout: {}\n", std::strerror(errno));
           std::exit(1);
         }

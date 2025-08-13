@@ -213,6 +213,8 @@ WordToken Lexer::lexWord() {
         out.push_back(src_[pos_ + 1]);
         pos_ += 2;
       } else {
+        // Preserve trailing backslash
+        out.push_back(c);
         ++pos_;
       }
       continue;
