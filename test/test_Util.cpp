@@ -71,4 +71,25 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
+using TildeCase = std::pair<std::string, std::string>;
+class UtilTildeTest : public ::testing::TestWithParam<TildeCase> {};
+
+TEST_P(UtilTildeTest, Test) {
+  auto const& [input, expected] = GetParam();
+  EXPECT_EQ(hsh::expandTilde(input), expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    UtilTest,
+    UtilTildeTest,
+    ::testing::Values(
+        // clang-format off
+        TildeCase{"~", std::getenv("HOME")},
+        TildeCase{"~/foo", std::string(std::getenv("HOME")) + "/foo"},
+        TildeCase{"~foo", "~foo"},
+        TildeCase{"/foo", "/foo"},
+        TildeCase{"foo", "foo"} // clang-format on
+    )
+);
+
 } // namespace

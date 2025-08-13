@@ -1,6 +1,7 @@
 #include "hsh/Executor.hpp"
 #include "hsh/FileDescriptor.hpp"
 #include "hsh/Signals.hpp"
+#include "hsh/Util.hpp"
 
 #include <array>
 #include <cerrno>
@@ -78,6 +79,9 @@ int runPipeline(std::span<std::vector<std::string>> commands) {
       auto& args = commands[i];
       if (args.empty()) {
         std::exit(0);
+      }
+      for (auto& arg : args) {
+        arg = expandTilde(arg);
       }
       auto argv = toArgv(args);
       execvp(argv[0], const_cast<char* const*>(argv.data()));

@@ -1,6 +1,7 @@
 #include "hsh/Util.hpp"
 #include "hsh/Constants.hpp"
 
+#include <cstdlib>
 #include <functional>
 #include <ranges>
 #include <string_view>
@@ -164,6 +165,17 @@ std::string expandParameters(std::string_view segment, int last_status) {
     out.push_back(c);
   }
   return out;
+}
+
+std::string expandTilde(std::string_view word) {
+  if (word.starts_with('~')) {
+    if (word.length() == 1 || word[1] == '/') {
+      if (const char* home = std::getenv("HOME")) {
+        return std::string(home) + std::string(word.substr(1));
+      }
+    }
+  }
+  return std::string(word);
 }
 
 } // namespace hsh
