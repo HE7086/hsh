@@ -1,4 +1,5 @@
 #include "hsh/Lexer.hpp"
+#include "hsh/Constants.hpp"
 
 #include <cstring>
 #include <string_view>
@@ -182,7 +183,7 @@ bool Lexer::match(char const* literal) {
 void Lexer::skipWsExceptNewline() {
   while (pos_ < src_.size()) {
     char c = src_[pos_];
-    if (c == ' ' || c == '\t' || c == '\r' || c == '\v' || c == '\f') {
+    if (std::isspace(c, LOCALE) && c != '\n') {
       ++pos_;
       continue;
     }

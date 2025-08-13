@@ -1,4 +1,5 @@
 #include "hsh/Util.hpp"
+
 #include <gtest/gtest.h>
 
 namespace {
@@ -71,12 +72,18 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
-using TildeCase = std::pair<std::string, std::string>;
+using TildeCase = std::pair<std::string, std::optional<std::string>>;
 class Tilde : public ::testing::TestWithParam<TildeCase> {};
 
 TEST_P(Tilde, Test) {
   auto const& [input, expected] = GetParam();
-  EXPECT_EQ(hsh::expandTilde(input), expected);
+  auto actual = hsh::expandTilde(input);
+  if (expected) {
+    ASSERT_TRUE(actual);
+    EXPECT_EQ(*actual, *expected);
+  } else {
+    EXPECT_FALSE(actual);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -84,11 +91,11 @@ INSTANTIATE_TEST_SUITE_P(
     Tilde,
     ::testing::Values(
         // clang-format off
-        TildeCase{"~", std::getenv("HOME")},
+        TildeCase{"~", std::string(std::getenv("HOME"))},
         TildeCase{"~/foo", std::string(std::getenv("HOME")) + "/foo"},
-        TildeCase{"~foo", "~foo"},
-        TildeCase{"/foo", "/foo"},
-        TildeCase{"foo", "foo"} // clang-format on
+        TildeCase{"~foo", std::nullopt},
+        TildeCase{"/foo", std::nullopt},
+        TildeCase{"foo", std::nullopt} // clang-format on
     )
 );
 

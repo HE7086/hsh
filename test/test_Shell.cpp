@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
-
 #include <array>
 #include <cerrno>
 #include <cstring>
 #include <string>
 #include <fcntl.h>
+#include <gtest/gtest.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>

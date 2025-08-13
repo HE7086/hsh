@@ -3,10 +3,8 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
-
-#include <gtest/gtest.h>
-
 #include <fcntl.h>
+#include <gtest/gtest.h>
 #include <unistd.h>
 
 using namespace hsh;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -9,7 +10,7 @@ namespace hsh {
 std::string              trim(std::string_view s);
 std::vector<std::string> splitPipeline(std::string_view line);
 std::vector<std::string> tokenize(std::string_view segment);
-std::string              expandTilde(std::string_view word);
+std::optional<std::string> expandTilde(std::string_view word);
 
 // Expand basic parameters within a pipeline segment while respecting quotes.
 // - Expands $VAR and ${VAR} using getenv (unset -> empty string)

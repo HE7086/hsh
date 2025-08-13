@@ -15,7 +15,6 @@ add_executable(test_hsh
 )
 target_sources(test_hsh PRIVATE ${HSH_SOURCES_ABS})
 
-# Ensure the standalone shell binary is up-to-date for integration tests
 add_dependencies(test_hsh hsh)
 
 target_link_libraries(test_hsh PRIVATE GTest::gtest_main fmt::fmt)

@@ -141,8 +141,8 @@ std::string expandParameters(std::string_view segment, int last_status) {
         continue;
       }
       // $VAR
-      auto is_name_start = [](char ch) { return std::isalpha(ch, LOCALE) || ch == '_'; };
-      auto is_name_char  = [](char ch) { return std::isalnum(ch, LOCALE) || ch == '_'; };
+      auto is_name_start = [](char c) { return std::isalpha(c, LOCALE) || c == '_'; };
+      auto is_name_char  = [](char c) { return std::isalnum(c, LOCALE) || c == '_'; };
       if (is_name_start(n)) {
         size_t      j = i + 1;
         std::string name;
@@ -167,15 +167,15 @@ std::string expandParameters(std::string_view segment, int last_status) {
   return out;
 }
 
-std::string expandTilde(std::string_view word) {
+std::optional<std::string> expandTilde(std::string_view word) {
   if (word.starts_with('~')) {
     if (word.length() == 1 || word[1] == '/') {
-      if (const char* home = std::getenv("HOME")) {
-        return std::string(home) + std::string(word.substr(1));
+      if (char const* home = std::getenv("HOME")) {
+        return std::string(home) + word.substr(1);
       }
     }
   }
-  return std::string(word);
+  return {};
 }
 
 } // namespace hsh

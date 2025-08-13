@@ -24,17 +24,17 @@ Parser::Parser(std::vector<Token> t)
     : tokens_(std::move(t)) {}
 
 Result<Program> Parser::parseProgram() {
-  Program p;
+  Program program;
   consumeLinebreak();
   auto list_e = parseList();
   if (!list_e) {
     return std::unexpected(list_e.error());
   }
-  p.list_ = std::move(*list_e);
+  program.list_ = std::move(*list_e);
   if (!at<EndToken>()) {
     return std::unexpected(std::format("expected end of input near '{}'", tokenText(peek())));
   }
-  return p;
+  return program;
 }
 
 Token const& Parser::peek(size_t offset) const {
@@ -52,21 +52,21 @@ bool Parser::isNewlineOrEnd() const {
   return atAny<NewlineToken, EndToken>();
 }
 
-Result<List> Parser::parseList() {
-  List list;
+Result<CommandList> Parser::parseList() {
+  CommandList list;
   while (true) {
-    auto ao_e = parseAndOr();
-    if (!ao_e) {
-      return std::unexpected(ao_e.error());
+    auto ado = parseAndOr();
+    if (!ado) {
+      return std::unexpected(ado.error());
     }
-    AndOr ao  = std::move(*ao_e);
-    SepOp sep = SepOp::SEQ;
+    AndOr and_or = std::move(*ado);
+    SepOp sep_op = SepOp::SEQ;
     if (tryConsume<SemiToken>() || tryConsume<NewlineToken>()) {
-      sep = SepOp::SEQ;
+      sep_op = SepOp::SEQ;
     } else if (tryConsume<AmpToken>()) {
-      sep = SepOp::BG;
+      sep_op = SepOp::BG;
     }
-    list.entries_.emplace_back(std::move(ao), sep);
+    list.entries_.emplace_back(std::move(and_or), sep_op);
     while (tryConsume<SemiToken>() || tryConsume<NewlineToken>()) {}
     // Stop when encountering tokens that terminate an embedded list
     if (atAny<RParenToken, RBraceToken, DoneToken, FiToken, EsacToken, ThenToken, ElseToken, ElifToken, DoToken, EndToken>()) {
@@ -87,55 +87,55 @@ Result<List> Parser::parseList() {
 }
 
 Result<AndOr> Parser::parseAndOr() {
-  AndOr res;
-  auto  p0 = parsePipeline();
-  if (!p0) {
-    return std::unexpected(p0.error());
+  AndOr result;
+  auto  pn = parsePipeline();
+  if (!pn) {
+    return std::unexpected(pn.error());
   }
-  res.pipes_.push_back(std::move(*p0));
+  result.pipes_.push_back(std::move(*pn));
   while (true) {
     if (tryConsume<AndIfToken>()) {
       consumeLinebreak();
-      auto pn = parsePipeline();
-      if (!pn) {
-        return std::unexpected(pn.error());
+      auto pipeline = parsePipeline();
+      if (!pipeline) {
+        return std::unexpected(pipeline.error());
       }
-      res.ops_.push_back(AndOrOp::AND);
-      res.pipes_.push_back(std::move(*pn));
+      result.ops_.push_back(AndOrOp::AND);
+      result.pipes_.push_back(std::move(*pipeline));
     } else if (tryConsume<OrIfToken>()) {
       consumeLinebreak();
       auto pn = parsePipeline();
       if (!pn) {
         return std::unexpected(pn.error());
       }
-      res.ops_.push_back(AndOrOp::OR);
-      res.pipes_.push_back(std::move(*pn));
+      result.ops_.push_back(AndOrOp::OR);
+      result.pipes_.push_back(std::move(*pn));
     } else {
       break;
     }
   }
-  return res;
+  return result;
 }
 
 Result<Pipeline> Parser::parsePipeline() {
-  Pipeline p;
+  Pipeline pipeline;
   if (tryConsume<BangToken>()) {
-    p.bang_ = true;
+    pipeline.bang_ = true;
   }
-  auto c0 = parseCommand();
-  if (!c0) {
-    return std::unexpected(c0.error());
+  auto cmd = parseCommand();
+  if (!cmd) {
+    return std::unexpected(cmd.error());
   }
-  p.cmds_.push_back(std::move(*c0));
+  pipeline.cmds_.push_back(std::move(*cmd));
   while (tryConsume<PipeToken>()) {
     consumeLinebreak();
-    auto cn = parseCommand();
-    if (!cn) {
-      return std::unexpected(cn.error());
+    auto cmd_next = parseCommand();
+    if (!cmd_next) {
+      return std::unexpected(cmd_next.error());
     }
-    p.cmds_.push_back(std::move(*cn));
+    pipeline.cmds_.push_back(std::move(*cmd_next));
   }
-  return p;
+  return pipeline;
 }
 
 bool Parser::isAllDigits(std::string const& s) {
@@ -152,9 +152,9 @@ bool Parser::isRedirToken(Token const& t) {
 Result<Redirect> Parser::parseIoRedirect() {
   std::optional<int> io;
   if (at<WordToken>()) {
-    auto const* w0 = peek().getIf<WordToken>();
-    if (w0 != nullptr && isAllDigits(w0->text_) && isRedirection(peek(1))) {
-      io = std::stoi(w0->text_);
+    auto const* wtk = peek().getIf<WordToken>();
+    if (wtk != nullptr && isAllDigits(wtk->text_) && isRedirection(peek(1))) {
+      io = std::stoi(wtk->text_);
       consume();
     }
   }
@@ -187,10 +187,10 @@ Result<Redirect> Parser::parseIoRedirect() {
     return std::unexpected(std::string("expected redirection near '") + tokenText(peek()) + "'");
   }
   // Target word (delimiter or filename). Accept reserved words as filenames too.
-  Word w{};
+  Word word{};
   if (at<WordToken>()) {
-    auto const* wt = peek().getIf<WordToken>();
-    w              = Word{wt->text_, wt->quoted_};
+    auto const* wtk = peek().getIf<WordToken>();
+    word            = Word{wtk->text_, wtk->quoted_};
     consume();
   } else if (atAny<
                  IfToken,
@@ -207,12 +207,12 @@ Result<Redirect> Parser::parseIoRedirect() {
                  CaseToken,
                  EsacToken>()) {
     // Treat reserved words as plain words in redirection targets
-    w = Word{tokenText(peek()), false};
+    word = Word{tokenText(peek()), false};
     consume();
   } else {
     return std::unexpected(std::string("expected word after redirection near '") + tokenText(peek()) + "'");
   }
-  return Redirect{io, op, w};
+  return Redirect{io, op, word};
 }
 
 Result<Command> Parser::parseCommand() {
@@ -230,7 +230,7 @@ Result<Command> Parser::parseCommand() {
       if (!ok) {
         return std::unexpected(ok.error());
       }
-      c.group_ = Group{std::make_unique<List>(std::move(*body_e)), true};
+      c.group_ = Group{std::make_unique<CommandList>(std::move(*body_e)), true};
     } else if (at<LBraceToken>()) {
       consume();
       consumeLinebreak();
@@ -242,7 +242,7 @@ Result<Command> Parser::parseCommand() {
       if (!ok) {
         return std::unexpected(ok.error());
       }
-      c.group_ = Group{std::make_unique<List>(std::move(*body_e)), false};
+      c.group_ = Group{std::make_unique<CommandList>(std::move(*body_e)), false};
     } else if (at<IfToken>()) {
       auto e = parseIfClause();
       if (!e) {
@@ -364,8 +364,8 @@ Result<IfClause> Parser::parseIfClause() {
     return std::unexpected(thenp.error());
   }
   IfClause ic;
-  ic.cond_      = std::make_unique<List>(std::move(*cond));
-  ic.then_part_ = std::make_unique<List>(std::move(*thenp));
+  ic.cond_      = std::make_unique<CommandList>(std::move(*cond));
+  ic.then_part_ = std::make_unique<CommandList>(std::move(*thenp));
   while (tryConsume<ElifToken>()) {
     consumeLinebreak();
     auto ec = parseList();
@@ -381,7 +381,7 @@ Result<IfClause> Parser::parseIfClause() {
     if (!et) {
       return std::unexpected(et.error());
     }
-    ic.elif_parts_.emplace_back(std::make_unique<List>(std::move(*ec)), std::make_unique<List>(std::move(*et)));
+    ic.elif_parts_.emplace_back(std::make_unique<CommandList>(std::move(*ec)), std::make_unique<CommandList>(std::move(*et)));
   }
   if (tryConsume<ElseToken>()) {
     consumeLinebreak();
@@ -389,7 +389,7 @@ Result<IfClause> Parser::parseIfClause() {
     if (!ep) {
       return std::unexpected(ep.error());
     }
-    ic.else_part_ = std::make_unique<List>(std::move(*ep));
+    ic.else_part_ = std::make_unique<CommandList>(std::move(*ep));
   }
   ok = expectConsume<FiToken>("expected 'fi'");
   if (!ok) {
@@ -429,8 +429,8 @@ Result<WhileClause> Parser::parseWhileUntil() {
   }
   WhileClause wc;
   wc.is_until_ = is_until;
-  wc.cond_     = std::make_unique<List>(std::move(*cond));
-  wc.body_     = std::make_unique<List>(std::move(*body));
+  wc.cond_     = std::make_unique<CommandList>(std::move(*cond));
+  wc.body_     = std::make_unique<CommandList>(std::move(*body));
   return wc;
 }
 
@@ -467,7 +467,7 @@ Result<ForClause> Parser::parseForClause() {
   if (!ok) {
     return std::unexpected(ok.error());
   }
-  return ForClause{std::move(name), std::move(wlist), std::make_unique<List>(std::move(*body))};
+  return ForClause{std::move(name), std::move(wlist), std::make_unique<CommandList>(std::move(*body))};
 }
 
 Result<CaseClause> Parser::parseCaseClause() {
@@ -514,7 +514,7 @@ Result<CaseClause> Parser::parseCaseClause() {
     if (!term) {
       consumeLinebreak();
     }
-    items.emplace_back(std::move(pats), std::make_unique<List>(std::move(*body)));
+    items.emplace_back(std::move(pats), std::make_unique<CommandList>(std::move(*body)));
     if (at<EsacToken>()) {
       break;
     }

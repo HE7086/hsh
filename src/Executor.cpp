@@ -7,7 +7,6 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <ranges>
 #include <span>
 #include <string>
 #include <vector>
@@ -81,7 +80,9 @@ int runPipeline(std::span<std::vector<std::string>> commands) {
         std::exit(0);
       }
       for (auto& arg : args) {
-        arg = expandTilde(arg);
+        if (auto expanded = expandTilde(arg)) {
+          arg = std::move(*expanded);
+        }
       }
       auto argv = toArgv(args);
       execvp(argv[0], const_cast<char* const*>(argv.data()));

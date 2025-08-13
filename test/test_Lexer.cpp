@@ -1,5 +1,6 @@
 #include "hsh/Lexer.hpp"
 #include "hsh/Tokens.hpp"
+
 #include <gtest/gtest.h>
 
 using namespace hsh;

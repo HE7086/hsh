@@ -41,30 +41,34 @@ struct SimpleCommand {
   std::vector<Redirect>   redirects_;
 };
 
-struct List;
+struct CommandList;
 
 struct IfClause {
-  std::unique_ptr<List>                                                cond_;
-  std::unique_ptr<List>                                                then_part_;
-  std::vector<std::pair<std::unique_ptr<List>, std::unique_ptr<List>>> elif_parts_;
-  std::unique_ptr<List>                                                else_part_;
+private:
+  using CL = std::unique_ptr<CommandList>;
+
+public:
+  std::unique_ptr<CommandList>   cond_;
+  std::unique_ptr<CommandList>   then_part_;
+  std::vector<std::pair<CL, CL>> elif_parts_;
+  std::unique_ptr<CommandList>   else_part_;
 };
 
 struct WhileClause {
-  bool                  is_until_ = false;
-  std::unique_ptr<List> cond_;
-  std::unique_ptr<List> body_;
+  bool                         is_until_ = false;
+  std::unique_ptr<CommandList> cond_;
+  std::unique_ptr<CommandList> body_;
 };
 
 struct ForClause {
-  std::string           name_;
-  std::vector<Word>     words_;
-  std::unique_ptr<List> body_;
+  std::string                  name_;
+  std::vector<Word>            words_;
+  std::unique_ptr<CommandList> body_;
 };
 
 struct CaseItem {
-  std::vector<Word>     patterns_;
-  std::unique_ptr<List> body_;
+  std::vector<Word>            patterns_;
+  std::unique_ptr<CommandList> body_;
 };
 
 struct CaseClause {
@@ -73,8 +77,8 @@ struct CaseClause {
 };
 
 struct Group {
-  std::unique_ptr<List> body_;
-  bool                  subshell_ = false;
+  std::unique_ptr<CommandList> body_;
+  bool                         subshell_ = false;
 };
 
 struct Command {
@@ -108,17 +112,17 @@ enum struct SepOp {
   BG
 };
 
-struct ListEntry {
+struct CommandListEntry {
   AndOr node_;
   SepOp sep_ = SepOp::SEQ;
 };
 
-struct List {
-  std::vector<ListEntry> entries_;
+struct CommandList {
+  std::vector<CommandListEntry> entries_;
 };
 
 struct Program {
-  List list_;
+  CommandList list_;
 };
 
 } // namespace hsh

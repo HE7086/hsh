@@ -1,5 +1,6 @@
 #include "hsh/AST.hpp"
 #include "hsh/Parser.hpp"
+
 #include <gtest/gtest.h>
 
 TEST(Parser, SimpleCommand) {

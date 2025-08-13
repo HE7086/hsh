@@ -58,7 +58,7 @@ private:
   void               consumeLinebreak();
   [[nodiscard]] bool isNewlineOrEnd() const;
 
-  Result<List>        parseList();
+  Result<CommandList>        parseList();
   Result<AndOr>       parseAndOr();
   Result<Pipeline>    parsePipeline();
   Result<Command>     parseCommand();

@@ -1,8 +1,8 @@
 #include "hsh/Executor.hpp"
-#include <gtest/gtest.h>
 
 #include <string>
 #include <vector>
+#include <gtest/gtest.h>
 
 using namespace hsh;
 
