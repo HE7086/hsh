@@ -1,6 +1,7 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
+#include <cstdlib>
 #include <string>
 #include <fcntl.h>
 #include <gtest/gtest.h>
@@ -60,16 +61,16 @@ RunResult runShellWithInput(std::string const& input) {
   }
   if (pid == 0) {
     // Child: set up stdio
-    dup2(inpipe[0], STDIN_FILENO);
-    dup2(outpipe[1], STDOUT_FILENO);
-    dup2(outpipe[1], STDERR_FILENO);
+    dup3(inpipe[0], STDIN_FILENO, O_CLOEXEC);
+    dup3(outpipe[1], STDOUT_FILENO, O_CLOEXEC);
+    dup3(outpipe[1], STDERR_FILENO, O_CLOEXEC);
     close(inpipe[0]);
     close(inpipe[1]);
     close(outpipe[0]);
     close(outpipe[1]);
     execl(shell.c_str(), shell.c_str(), (char*) nullptr);
     std::perror("exec hsh");
-    _exit(127);
+    std::exit(127);
   }
   // Parent
   close(inpipe[0]);
