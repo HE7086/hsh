@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
-TEST(BuiltinsTest, HandleBuiltinCD) {
+TEST(Builtins, CD) {
   // Save current directory and restore after test
   std::unique_ptr<char, void (*)(void*)> oldcwd(getcwd(nullptr, 0), std::free);
   ASSERT_NE(oldcwd.get(), nullptr);
@@ -22,37 +22,37 @@ TEST(BuiltinsTest, HandleBuiltinCD) {
   ASSERT_EQ(chdir(oldcwd.get()), 0);
 }
 
-TEST(BuiltinsTest, HandleBuiltinExit) {
+TEST(Builtins, Exit) {
   std::vector<std::string> args        = {"exit", "99"};
   int                      last_status = 0;
   EXPECT_EXIT(hsh::handleBuiltin(args, last_status), ::testing::ExitedWithCode(99), "");
 }
 
-TEST(BuiltinsTest, HandleBuiltinNotABuiltin) {
+TEST(Builtins, NotABuiltin) {
   std::vector<std::string> args        = {"ls", "-l"};
   int                      last_status = 0;
   EXPECT_FALSE(hsh::handleBuiltin(args, last_status));
   EXPECT_EQ(last_status, 0);
 }
 
-TEST(BuiltinsTest, HandleBuiltinCDError) {
+TEST(Builtins, CDError) {
   std::vector<std::string> args        = {"cd", "/nonexistent-directory"};
   int                      last_status = 0;
   EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
   EXPECT_NE(last_status, 0);
 }
 
-TEST(BuiltinsTest, HandleBuiltinExitValidCode) {
+TEST(Builtins, ExitValidCode) {
   std::vector<std::string> args = {"exit", "42"};
   EXPECT_EXIT(hsh::builtinExit(args), ::testing::ExitedWithCode(42), "");
 }
 
-TEST(BuiltinsTest, HandleBuiltinExitInvalidCodeDefaultsTo2) {
+TEST(Builtins, ExitInvalidCodeDefaultsTo2) {
   std::vector<std::string> args = {"exit", "abc"};
   EXPECT_EXIT(hsh::builtinExit(args), ::testing::ExitedWithCode(2), "");
 }
 
-TEST(BuiltinsTest, HandleBuiltinExportSetsEnv) {
+TEST(Builtins, ExportSetsEnv) {
   std::vector<std::string> args        = {"export", "HSH_TEST_EXPORT=ok"};
   int                      last_status = 0;
   EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
@@ -62,14 +62,14 @@ TEST(BuiltinsTest, HandleBuiltinExportSetsEnv) {
   EXPECT_STREQ(v, "ok");
 }
 
-TEST(BuiltinsTest, HandleBuiltinExportInvalidName) {
+TEST(Builtins, ExportInvalidName) {
   std::vector<std::string> args        = {"export", "1BAD=val"};
   int                      last_status = 0;
   EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
   EXPECT_NE(last_status, 0);
 }
 
-TEST(BuiltinsTest, EchoPrintsWithNewline) {
+TEST(Builtins, EchoPrintsWithNewline) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
 
@@ -82,7 +82,7 @@ TEST(BuiltinsTest, EchoPrintsWithNewline) {
   EXPECT_EQ(last_status, 0);
 }
 
-TEST(BuiltinsTest, EchoNoArgsPrintsNewline) {
+TEST(Builtins, EchoNoArgsPrintsNewline) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
 
@@ -95,7 +95,7 @@ TEST(BuiltinsTest, EchoNoArgsPrintsNewline) {
   EXPECT_EQ(last_status, 0);
 }
 
-TEST(BuiltinsTest, EchoSuppressNewlineWithDashN) {
+TEST(Builtins, EchoSuppressNewlineWithDashN) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
 
@@ -108,7 +108,7 @@ TEST(BuiltinsTest, EchoSuppressNewlineWithDashN) {
   EXPECT_EQ(last_status, 0);
 }
 
-TEST(BuiltinsTest, AliasDefineAndExpand) {
+TEST(Builtins, AliasDefineAndExpand) {
   std::vector<std::string> def         = {"alias", "ll=echo hi"};
   int                      last_status = 0;
   EXPECT_TRUE(hsh::handleBuiltin(def, last_status));
@@ -122,7 +122,7 @@ TEST(BuiltinsTest, AliasDefineAndExpand) {
   EXPECT_EQ(cmd[2], "there");
 }
 
-TEST(BuiltinsTest, AliasListAndShow) {
+TEST(Builtins, AliasListAndShow) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
 
@@ -144,7 +144,7 @@ TEST(BuiltinsTest, AliasListAndShow) {
   EXPECT_EQ(out, "alias gs='git status'\n");
 }
 
-TEST(BuiltinsTest, AliasPrintsWithEscapedSingleQuotes) {
+TEST(Builtins, AliasPrintsWithEscapedSingleQuotes) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
 
@@ -160,7 +160,7 @@ TEST(BuiltinsTest, AliasPrintsWithEscapedSingleQuotes) {
   EXPECT_EQ(out, "alias w='a'\\''b'\n");
 }
 
-TEST(BuiltinsTest, AliasDefineWithoutQuotesDoesNotSpanArgs) {
+TEST(Builtins, AliasDefineWithoutQuotesDoesNotSpanArgs) {
   using testing::internal::CaptureStdout;
   using testing::internal::GetCapturedStdout;
   using testing::internal::CaptureStderr;
@@ -187,7 +187,7 @@ TEST(BuiltinsTest, AliasDefineWithoutQuotesDoesNotSpanArgs) {
   EXPECT_EQ(cmd[0], "ls");
 }
 
-TEST(BuiltinsTest, AliasUnknownShowsError) {
+TEST(Builtins, AliasUnknownShowsError) {
   using testing::internal::CaptureStderr;
   using testing::internal::GetCapturedStderr;
 
@@ -200,7 +200,7 @@ TEST(BuiltinsTest, AliasUnknownShowsError) {
   EXPECT_NE(last_status, 0);
 }
 
-TEST(BuiltinsTest, UnaliasSingle) {
+TEST(Builtins, UnaliasSingle) {
   // Define alias and then remove it
   int                      last_status = 0;
   std::vector<std::string> def         = {"alias", "ll=echo hi"};
@@ -217,7 +217,7 @@ TEST(BuiltinsTest, UnaliasSingle) {
   EXPECT_EQ(cmd[0], "ll");
 }
 
-TEST(BuiltinsTest, UnaliasAll) {
+TEST(Builtins, UnaliasAll) {
   int                      last_status = 0;
   std::vector<std::string> def1        = {"alias", "a=echo A"};
   std::vector<std::string> def2        = {"alias", "b=echo B"};
@@ -237,7 +237,7 @@ TEST(BuiltinsTest, UnaliasAll) {
   EXPECT_EQ(cb[0], "b");
 }
 
-TEST(BuiltinsTest, UnaliasUnknown) {
+TEST(Builtins, UnaliasUnknown) {
   using testing::internal::CaptureStderr;
   using testing::internal::GetCapturedStderr;
   int                      last_status = 0;

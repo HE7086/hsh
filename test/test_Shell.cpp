@@ -117,28 +117,28 @@ RunResult runShellWithInput(std::string const& input) {
 
 } // namespace
 
-TEST(ShellIntegration, Echo) {
+TEST(Shell, Echo) {
   auto res = runShellWithInput("echo hello\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_EQ(res.output_, "hello\n");
 }
 
-TEST(ShellIntegration, Quotes) {
+TEST(Shell, Quotes) {
   auto res = runShellWithInput("echo 'hello world'\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_EQ(res.output_, "hello world\n");
 }
 
-TEST(ShellIntegration, Pipeline) {
+TEST(Shell, Pipeline) {
   auto res = runShellWithInput("echo a | wc -l\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_EQ(res.output_, "1\n");
 }
 
-TEST(ShellIntegration, CDAndPwd) {
+TEST(Shell, CDAndPwd) {
   auto res = runShellWithInput("cd /\npwd\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
@@ -146,34 +146,34 @@ TEST(ShellIntegration, CDAndPwd) {
   EXPECT_EQ(res.output_, "/\n");
 }
 
-TEST(ShellIntegration, ExitCode) {
+TEST(Shell, ExitCode) {
   auto res = runShellWithInput("exit 7\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 7);
 }
 
-TEST(ShellIntegration, ExportVisibleToChild) {
+TEST(Shell, ExportVisibleToChild) {
   auto res = runShellWithInput("export HSH_CHILD_FOO=bar\nenv\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_NE(res.output_.find("HSH_CHILD_FOO=bar\n"), std::string::npos);
 }
 
-TEST(ShellIntegration, AliasQuotedDefinition) {
+TEST(Shell, AliasQuotedDefinition) {
   auto res = runShellWithInput("alias l='ls -la'\nalias l\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_NE(res.output_.find("alias l='ls -la'\n"), std::string::npos);
 }
 
-TEST(ShellIntegration, ParamExpansionBasic) {
+TEST(Shell, ParamExpansionBasic) {
   auto res = runShellWithInput("export HSH_TEST_X=world\necho hello $HSH_TEST_X\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res.status_));
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_EQ(res.output_, "hello world\n");
 }
 
-TEST(ShellIntegration, ParamExpansionQuotes) {
+TEST(Shell, ParamExpansionQuotes) {
   // No expansion in single quotes
   auto res1 = runShellWithInput("echo '$HSH_TEST_Y'\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res1.status_));
@@ -187,7 +187,7 @@ TEST(ShellIntegration, ParamExpansionQuotes) {
   EXPECT_EQ(res2.output_, "ok\n");
 }
 
-TEST(ShellIntegration, ParamExpansionBraceAndStatus) {
+TEST(Shell, ParamExpansionBraceAndStatus) {
   // ${VAR}
   auto res1 = runShellWithInput("export HSH_TEST_Z=zzz\necho ${HSH_TEST_Z}\nexit 0\n");
   ASSERT_TRUE(WIFEXITED(res1.status_));

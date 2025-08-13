@@ -13,7 +13,7 @@ std::vector<Token> lexAll(std::string_view s) {
 
 } // namespace
 
-TEST(LexerTest, ReservedWordsAndPunct) {
+TEST(Lexer, ReservedWordsAndPunct) {
   auto toks = lexAll("if then else elif fi while until do done for in case esac; & | ! ( ) { }\n");
 
   // Verify a subset in sequence and final EndToken
@@ -47,7 +47,7 @@ TEST(LexerTest, ReservedWordsAndPunct) {
   EXPECT_TRUE(toks[i].is<EndToken>());
 }
 
-TEST(LexerTest, RedirectionsAndComments) {
+TEST(Lexer, RedirectionsAndComments) {
   auto toks = lexAll("1> out 2>>out << EOF <<- EOF # comment here\nword\n");
 
   // 1 > out 2 >> out << EOF <<- EOF <newline> word <newline> <end>
@@ -69,7 +69,7 @@ TEST(LexerTest, RedirectionsAndComments) {
 }
 
 
-TEST(LexerTest, WordToken) {
+TEST(Lexer, WordToken) {
   auto toks = lexAll("word1 word-2 word_3");
   ASSERT_EQ(toks.size(), 4);
   auto const* word = toks[0].getIf<WordToken>();
@@ -84,7 +84,7 @@ TEST(LexerTest, WordToken) {
   EXPECT_TRUE(toks[3].is<EndToken>());
 }
 
-TEST(LexerTest, Combined) {
+TEST(Lexer, Combined) {
   auto toks = lexAll("ls -l > file.txt # send output to file\n");
   ASSERT_EQ(toks.size(), 6);
   auto const* word = toks[0].getIf<WordToken>();
@@ -101,19 +101,19 @@ TEST(LexerTest, Combined) {
   EXPECT_TRUE(toks[5].is<EndToken>());
 }
 
-TEST(LexerTest, EndTokenOnly) {
+TEST(Lexer, EndTokenOnly) {
   auto toks = lexAll("");
   ASSERT_EQ(toks.size(), 1);
   EXPECT_TRUE(toks[0].is<EndToken>());
 }
 
-TEST(LexerTest, EndTokenWithWhitespace) {
+TEST(Lexer, EndTokenWithWhitespace) {
   auto toks = lexAll("  \t  ");
   ASSERT_EQ(toks.size(), 1);
   EXPECT_TRUE(toks[0].is<EndToken>());
 }
 
-TEST(LexerTest, SimpleCommand) {
+TEST(Lexer, SimpleCommand) {
   auto toks = lexAll("ls -l -a");
   ASSERT_EQ(toks.size(), 4);
   auto const* word = toks[0].getIf<WordToken>();
@@ -128,7 +128,7 @@ TEST(LexerTest, SimpleCommand) {
   EXPECT_TRUE(toks[3].is<EndToken>());
 }
 
-TEST(LexerTest, Pipeline) {
+TEST(Lexer, Pipeline) {
   auto toks = lexAll("ls | grep foo");
   ASSERT_EQ(toks.size(), 5);
   auto const* word = toks[0].getIf<WordToken>();
@@ -144,7 +144,7 @@ TEST(LexerTest, Pipeline) {
   EXPECT_TRUE(toks[4].is<EndToken>());
 }
 
-TEST(LexerTest, QuotedStrings) {
+TEST(Lexer, QuotedStrings) {
   auto toks = lexAll("echo 'hello world' \"goodbye world\"");
   ASSERT_EQ(toks.size(), 4);
   auto const* word = toks[0].getIf<WordToken>();
@@ -161,7 +161,7 @@ TEST(LexerTest, QuotedStrings) {
   EXPECT_TRUE(toks[3].is<EndToken>());
 }
 
-TEST(LexerTest, AndOrOperators) {
+TEST(Lexer, AndOrOperators) {
   auto toks = lexAll("a && b || c");
   ASSERT_EQ(toks.size(), 6);
   auto const* w = toks[0].getIf<WordToken>();
@@ -178,7 +178,7 @@ TEST(LexerTest, AndOrOperators) {
   EXPECT_TRUE(toks[5].is<EndToken>());
 }
 
-TEST(LexerTest, LessAndGreatAnd) {
+TEST(Lexer, LessAndGreatAnd) {
   auto toks = lexAll("<& 3 >& 4");
   ASSERT_EQ(toks.size(), 5);
   EXPECT_TRUE(toks[0].is<LessAndToken>());

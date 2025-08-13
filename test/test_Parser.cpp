@@ -2,7 +2,7 @@
 #include "hsh/Parser.hpp"
 #include <gtest/gtest.h>
 
-TEST(ParserTest, SimpleCommand) {
+TEST(Parser, SimpleCommand) {
   auto prog = hsh::parse("ls -l -a");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 1);
@@ -20,7 +20,7 @@ TEST(ParserTest, SimpleCommand) {
   EXPECT_EQ(simple_cmd.words_[2].text_, "-a");
 }
 
-TEST(ParserTest, Pipeline) {
+TEST(Parser, Pipeline) {
   auto prog = hsh::parse("ls | grep foo | wc -l");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 1);
@@ -52,7 +52,7 @@ TEST(ParserTest, Pipeline) {
 }
 
 
-TEST(ParserTest, Semicolon) {
+TEST(Parser, Semicolon) {
   auto prog = hsh::parse("ls; ls");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 2);
@@ -80,7 +80,7 @@ TEST(ParserTest, Semicolon) {
   EXPECT_EQ(simple_cmd2.words_[0].text_, "ls");
 }
 
-TEST(ParserTest, And) {
+TEST(Parser, And) {
   auto prog = hsh::parse("ls && ls");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 1);
@@ -108,7 +108,7 @@ TEST(ParserTest, And) {
   EXPECT_EQ(simple_cmd2.words_[0].text_, "ls");
 }
 
-TEST(ParserTest, Or) {
+TEST(Parser, Or) {
   auto prog = hsh::parse("ls || ls");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 1);
@@ -136,7 +136,7 @@ TEST(ParserTest, Or) {
   EXPECT_EQ(simple_cmd2.words_[0].text_, "ls");
 }
 
-TEST(ParserTest, Bang) {
+TEST(Parser, Bang) {
   auto prog = hsh::parse("! ls");
   ASSERT_TRUE(prog.has_value());
   ASSERT_EQ(prog->list_.entries_.size(), 1);
@@ -152,7 +152,7 @@ TEST(ParserTest, Bang) {
   EXPECT_EQ(simple_cmd.words_[0].text_, "ls");
 }
 
-TEST(ParserTest, GroupingParensAndBraces) {
+TEST(Parser, GroupingParensAndBraces) {
   {
     auto prog = hsh::parse("( ls ; echo hi )");
     ASSERT_TRUE(prog.has_value());
@@ -177,7 +177,7 @@ TEST(ParserTest, GroupingParensAndBraces) {
   }
 }
 
-TEST(ParserTest, IfWhileForCaseAndRedirections) {
+TEST(Parser, IfWhileForCaseAndRedirections) {
   // if ... then ... else ... fi
   {
     auto prog = hsh::parse("if ls; then echo ok; else echo no; fi");

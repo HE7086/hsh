@@ -11,7 +11,7 @@
 
 using namespace hsh;
 
-TEST(FileDescriptorTest, DestructorClosesFd) {
+TEST(FileDescriptor, DestructorClosesFd) {
   std::array<int, 2> fds{};
   ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0) << std::strerror(errno);
   int r = fds[0];
@@ -28,7 +28,7 @@ TEST(FileDescriptorTest, DestructorClosesFd) {
   close(fds[1]);
 }
 
-TEST(FileDescriptorTest, MoveSemantics) {
+TEST(FileDescriptor, MoveSemantics) {
   std::array<int, 2> fds{};
   ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0) << std::strerror(errno);
   int r = fds[0];

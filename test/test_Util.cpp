@@ -4,16 +4,16 @@
 namespace {
 
 using TrimCase = std::pair<std::string, std::string>;
-class UtilTrimTest : public ::testing::TestWithParam<TrimCase> {};
+class Trim : public ::testing::TestWithParam<TrimCase> {};
 
-TEST_P(UtilTrimTest, Test) {
+TEST_P(Trim, Test) {
   auto const& [input, expected] = GetParam();
   EXPECT_EQ(hsh::trim(input), expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    UtilTest,
-    UtilTrimTest,
+    Util,
+    Trim,
     ::testing::Values(
         // clang-format off
         TrimCase{"  hello  ", "hello"},
@@ -26,16 +26,16 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 using SplitCase = std::pair<std::string, std::vector<std::string>>;
-class UtilSplitPipelineTest : public ::testing::TestWithParam<SplitCase> {};
+class SplitPipeline : public ::testing::TestWithParam<SplitCase> {};
 
-TEST_P(UtilSplitPipelineTest, Test) {
+TEST_P(SplitPipeline, Test) {
   auto const& [input, expected] = GetParam();
   EXPECT_EQ(hsh::splitPipeline(input), expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    UtilTest,
-    UtilSplitPipelineTest,
+    Util,
+    SplitPipeline,
     ::testing::Values(
         // clang-format off
         SplitCase{"ls | grep foo | wc -l", {"ls", "grep foo", "wc -l"}},
@@ -47,16 +47,16 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 using TokenizeCase = std::pair<std::string, std::vector<std::string>>;
-class UtilTokenizeTest : public ::testing::TestWithParam<TokenizeCase> {};
+class Tokenize : public ::testing::TestWithParam<TokenizeCase> {};
 
-TEST_P(UtilTokenizeTest, Test) {
+TEST_P(Tokenize, Test) {
   auto const& [input, expected] = GetParam();
   EXPECT_EQ(hsh::tokenize(input), expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    UtilTest,
-    UtilTokenizeTest,
+    Util,
+    Tokenize,
     ::testing::Values(
         // clang-format off
         TokenizeCase{"ls -l -a", {"ls", "-l", "-a"}},
@@ -72,16 +72,16 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 using TildeCase = std::pair<std::string, std::string>;
-class UtilTildeTest : public ::testing::TestWithParam<TildeCase> {};
+class Tilde : public ::testing::TestWithParam<TildeCase> {};
 
-TEST_P(UtilTildeTest, Test) {
+TEST_P(Tilde, Test) {
   auto const& [input, expected] = GetParam();
   EXPECT_EQ(hsh::expandTilde(input), expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    UtilTest,
-    UtilTildeTest,
+    Util,
+    Tilde,
     ::testing::Values(
         // clang-format off
         TildeCase{"~", std::getenv("HOME")},
