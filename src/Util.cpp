@@ -77,4 +77,93 @@ std::vector<std::string> tokenize(std::string_view segment) {
   return splitWithQuotes(segment, ' ', false, false);
 }
 
+std::string expandParameters(std::string_view segment, int last_status) {
+  std::string out;
+  out.reserve(segment.size());
+  bool in_single = false;
+  bool in_double = false;
+  for (size_t i = 0; i < segment.size(); ++i) {
+    char c = segment[i];
+    if (c == '\\') {
+      // Preserve escapes
+      out.push_back(c);
+      if (i + 1 < segment.size()) {
+        out.push_back(segment[i + 1]);
+        ++i;
+      }
+      continue;
+    }
+    if (c == '\'' && !in_double) {
+      in_single = !in_single;
+      out.push_back(c);
+      continue;
+    }
+    if (c == '"' && !in_single) {
+      in_double = !in_double;
+      out.push_back(c);
+      continue;
+    }
+    if (c == '$' && !in_single) {
+      // Parameter expansion
+      if (i + 1 >= segment.size()) {
+        out.push_back(c);
+        continue;
+      }
+      char n = segment[i + 1];
+      // $?
+      if (n == '?') {
+        out += std::to_string(last_status);
+        ++i;
+        continue;
+      }
+      // ${VAR}
+      if (n == '{') {
+        size_t      j = i + 2;
+        std::string name;
+        while (j < segment.size() && segment[j] != '}') {
+          name.push_back(segment[j]);
+          ++j;
+        }
+        if (j < segment.size() && segment[j] == '}') {
+          // Valid brace form
+          char const* v = nullptr;
+          if (!name.empty()) {
+            v = std::getenv(name.c_str());
+          }
+          if (v != nullptr) {
+            out += v;
+          }
+          i = j; // consume through '}'
+          continue;
+        }
+        out.push_back('$');
+        continue;
+      }
+      // $VAR
+      auto is_name_start = [](char ch) { return std::isalpha(ch, LOCALE) || ch == '_'; };
+      auto is_name_char  = [](char ch) { return std::isalnum(ch, LOCALE) || ch == '_'; };
+      if (is_name_start(n)) {
+        size_t      j = i + 1;
+        std::string name;
+        name.push_back(segment[j]);
+        ++j;
+        while (j < segment.size() && is_name_char(segment[j])) {
+          name.push_back(segment[j]);
+          ++j;
+        }
+        char const* v = std::getenv(name.c_str());
+        if (v != nullptr) {
+          out += v;
+        }
+        i = j - 1;
+        continue;
+      }
+      out.push_back('$');
+      continue;
+    }
+    out.push_back(c);
+  }
+  return out;
+}
+
 } // namespace hsh

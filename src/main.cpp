@@ -38,6 +38,7 @@ int main() {
 
     auto commands =
         hsh::splitPipeline(line) |
+        std::views::transform([&](std::string const& s) { return hsh::expandParameters(s, last_status); }) |
         std::views::transform([](std::string const& s) { return hsh::tokenize(s); }) |
         std::views::filter(std::not_fn(&std::vector<std::string>::empty)) |
         std::ranges::to<std::vector>();

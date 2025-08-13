@@ -165,3 +165,39 @@ TEST(ShellIntegration, AliasQuotedDefinition) {
   EXPECT_EQ(WEXITSTATUS(res.status_), 0);
   EXPECT_NE(res.output_.find("alias l='ls -la'\n"), std::string::npos);
 }
+
+TEST(ShellIntegration, ParamExpansionBasic) {
+  auto res = runShellWithInput("export HSH_TEST_X=world\necho hello $HSH_TEST_X\nexit 0\n");
+  ASSERT_TRUE(WIFEXITED(res.status_));
+  EXPECT_EQ(WEXITSTATUS(res.status_), 0);
+  EXPECT_EQ(res.output_, "hello world\n");
+}
+
+TEST(ShellIntegration, ParamExpansionQuotes) {
+  // No expansion in single quotes
+  auto res1 = runShellWithInput("echo '$HSH_TEST_Y'\nexit 0\n");
+  ASSERT_TRUE(WIFEXITED(res1.status_));
+  EXPECT_EQ(WEXITSTATUS(res1.status_), 0);
+  EXPECT_EQ(res1.output_, "$HSH_TEST_Y\n");
+
+  // Expansion in double quotes
+  auto res2 = runShellWithInput("export HSH_TEST_Y=ok\necho \"$HSH_TEST_Y\"\nexit 0\n");
+  ASSERT_TRUE(WIFEXITED(res2.status_));
+  EXPECT_EQ(WEXITSTATUS(res2.status_), 0);
+  EXPECT_EQ(res2.output_, "ok\n");
+}
+
+TEST(ShellIntegration, ParamExpansionBraceAndStatus) {
+  // ${VAR}
+  auto res1 = runShellWithInput("export HSH_TEST_Z=zzz\necho ${HSH_TEST_Z}\nexit 0\n");
+  ASSERT_TRUE(WIFEXITED(res1.status_));
+  EXPECT_EQ(WEXITSTATUS(res1.status_), 0);
+  EXPECT_EQ(res1.output_, "zzz\n");
+
+  // $?
+  auto res2 = runShellWithInput("false\necho $?\nexit 0\n");
+  ASSERT_TRUE(WIFEXITED(res2.status_));
+  EXPECT_EQ(WEXITSTATUS(res2.status_), 0);
+  // On most systems, /bin/false exits 1
+  EXPECT_EQ(res2.output_, "1\n");
+}
