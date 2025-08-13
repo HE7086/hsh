@@ -10,21 +10,26 @@ bool handleBuiltin(std::span<std::string> args, int& last_status) {
     return true;
   }
   if (args[0] == "exit") {
-    builtinExit(args);
-  } else if (args[0] == "cd") {
-    builtinCD(args, last_status);
+    builtin::exit(args);
+  }
+  if (args[0] == "cd") {
+    builtin::cd(args, last_status);
     return true;
-  } else if (args[0] == "export") {
-    builtinExport(args, last_status);
+  }
+  if (args[0] == "export") {
+    builtin::hshExport(args, last_status);
     return true;
-  } else if (args[0] == "echo") {
-    builtinEcho(args, last_status);
+  }
+  if (args[0] == "echo") {
+    builtin::echo(args, last_status);
     return true;
-  } else if (args[0] == "alias") {
-    builtinAlias(args, last_status);
+  }
+  if (args[0] == "alias") {
+    builtin::alias(args, last_status);
     return true;
-  } else if (args[0] == "unalias") {
-    builtinUnalias(args, last_status);
+  }
+  if (args[0] == "unalias") {
+    builtin::unalias(args, last_status);
     return true;
   }
   return false;

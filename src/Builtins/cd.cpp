@@ -6,9 +6,9 @@
 #include <fmt/core.h>
 #include <unistd.h>
 
-namespace hsh {
+namespace hsh::builtin {
 
-void builtinCD(std::span<std::string> args, int& last_status) {
+void cd(std::span<std::string> args, int& last_status) {
   char const* path = nullptr;
   if (args.size() > 1) {
     path = args[1].c_str();
@@ -26,4 +26,4 @@ void builtinCD(std::span<std::string> args, int& last_status) {
   }
 }
 
-} // namespace hsh
+} // namespace hsh::builtin

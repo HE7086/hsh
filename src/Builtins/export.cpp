@@ -26,7 +26,9 @@ bool isValidName(std::string_view name) {
 
 } // namespace
 
-void builtinExport(std::span<std::string> args, int& last_status) {
+namespace builtin {
+
+void hshExport(std::span<std::string> args, int& last_status) {
   // No arguments: print the environment (KEY=VALUE per line)
   if (args.size() < 2) {
     for (char** env_iter = environ; env_iter != nullptr && *env_iter != nullptr; ++env_iter) {
@@ -70,5 +72,7 @@ void builtinExport(std::span<std::string> args, int& last_status) {
   }
   last_status = result_code;
 }
+
+} // namespace builtin
 
 } // namespace hsh

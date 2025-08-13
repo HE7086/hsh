@@ -18,11 +18,11 @@ set(HSH_SOURCES
     Signals.cpp
     Executor.cpp
     Builtins.cpp
-    Builtins/CD.cpp
-    Builtins/Exit.cpp
-    Builtins/Export.cpp
-    Builtins/Echo.cpp
-    Builtins/Alias.cpp
+    Builtins/cd.cpp
+    Builtins/exit.cpp
+    Builtins/export.cpp
+    Builtins/echo.cpp
+    Builtins/alias.cpp
     Parser.cpp
     Lexer.cpp
     Constants.cpp

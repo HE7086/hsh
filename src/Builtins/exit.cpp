@@ -4,9 +4,9 @@
 #include <cstdlib>
 #include <fmt/core.h>
 
-namespace hsh {
+namespace hsh::builtin {
 
-[[noreturn]] void builtinExit(std::span<std::string> args) {
+[[noreturn]] void exit(std::span<std::string> args) {
   int code = 2;
   if (args.size() > 1) {
     auto const& s  = args[1];

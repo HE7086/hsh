@@ -6,12 +6,18 @@
 
 namespace hsh {
 
-void              builtinCD(std::span<std::string> args, int& last_status);
-[[noreturn]] void builtinExit(std::span<std::string> args);
-void              builtinExport(std::span<std::string> args, int& last_status);
-void              builtinEcho(std::span<std::string> args, int& last_status);
-void              builtinAlias(std::span<std::string> args, int& last_status);
-void              builtinUnalias(std::span<std::string> args, int& last_status);
+namespace builtin {
+
+[[noreturn]] void exit(std::span<std::string> args);
+
+void cd(std::span<std::string> args, int& last_status);
+void hshExport(std::span<std::string> args, int& last_status);
+void echo(std::span<std::string> args, int& last_status);
+void alias(std::span<std::string> args, int& last_status);
+void unalias(std::span<std::string> args, int& last_status);
+
+} // namespace builtin
+
 
 // Expand first-word aliases in-place; supports simple recursive expansion
 // with a bounded iteration to prevent cycles.

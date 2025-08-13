@@ -6,9 +6,9 @@
 #include <span>
 #include <string>
 
-namespace hsh {
+namespace hsh::builtin {
 
-void builtinEcho(std::span<std::string> args, int& last_status) {
+void echo(std::span<std::string> args, int& last_status) {
   // POSIX-like echo: print arguments separated by spaces, trailing newline by default.
   // Support -n (may be repeated) to suppress the trailing newline.
   bool   newline = true;

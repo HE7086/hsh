@@ -44,12 +44,12 @@ TEST(Builtins, CDError) {
 
 TEST(Builtins, ExitValidCode) {
   std::vector<std::string> args = {"exit", "42"};
-  EXPECT_EXIT(hsh::builtinExit(args), ::testing::ExitedWithCode(42), "");
+  EXPECT_EXIT(hsh::builtin::exit(args), ::testing::ExitedWithCode(42), "");
 }
 
 TEST(Builtins, ExitInvalidCodeDefaultsTo2) {
   std::vector<std::string> args = {"exit", "abc"};
-  EXPECT_EXIT(hsh::builtinExit(args), ::testing::ExitedWithCode(2), "");
+  EXPECT_EXIT(hsh::builtin::exit(args), ::testing::ExitedWithCode(2), "");
 }
 
 TEST(Builtins, ExportSetsEnv) {
