@@ -7,7 +7,7 @@
 namespace hsh::builtin {
 
 [[noreturn]] void exit(std::span<std::string> args) {
-  int code = 2;
+  int code = 0;
   if (args.size() > 1) {
     auto const& s  = args[1];
     auto [ptr, ec] = std::from_chars(s.begin().base(), s.end().base(), code);

@@ -45,3 +45,66 @@ TEST(FileDescriptor, MoveSemantics) {
   // both ends should be closed now
   close(w); // idempotent if already closed
 }
+
+// Additional FileDescriptor tests
+
+TEST(FileDescriptor, DefaultConstructor) {
+  // Test default constructor creates invalid fd
+  FileDescriptor fd;
+  EXPECT_EQ(fd.get(), -1);
+}
+
+TEST(FileDescriptor, MoveAssignment) {
+  // Test move assignment operator
+  std::array<int, 2> fds{};
+  ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0) << std::strerror(errno);
+  
+  FileDescriptor a(fds[0]); // read end
+  FileDescriptor b(fds[1]); // write end
+  
+  b = std::move(a); // Should close fds[1] and take ownership of fds[0]
+  
+  // Now b has the read end, so we need to write to a different fd and read from b
+  char test_data = 'x';
+  EXPECT_EQ(write(fds[1], &test_data, 1), -1); // fds[1] should be closed
+  EXPECT_EQ(errno, EBADF);
+  
+  // a should be invalidated
+  EXPECT_EQ(a.get(), -1);
+  
+  // b should have the read end
+  EXPECT_EQ(b.get(), fds[0]);
+}
+
+TEST(FileDescriptor, SelfMoveAssignment) {
+  // Test self move assignment (should be safe)
+  std::array<int, 2> fds{};
+  ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0) << std::strerror(errno);
+  
+  FileDescriptor fd(fds[0]);
+  int original_fd = fd.get();
+  
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wself-move"
+  fd = std::move(fd); // Self assignment
+  #pragma GCC diagnostic pop
+  
+  EXPECT_EQ(fd.get(), original_fd); // Should still be valid
+  close(fds[1]);
+}
+
+TEST(FileDescriptor, Release) {
+  // Test release functionality
+  std::array<int, 2> fds{};
+  ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0) << std::strerror(errno);
+  
+  FileDescriptor fd(fds[0]);
+  int original_fd = fd.release();
+  
+  EXPECT_EQ(original_fd, fds[0]);
+  EXPECT_EQ(fd.get(), -1); // Should be invalidated
+  
+  // We're responsible for closing the released fd
+  close(original_fd);
+  close(fds[1]);
+}

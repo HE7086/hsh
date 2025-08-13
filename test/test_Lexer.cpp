@@ -216,3 +216,117 @@ TEST(Lexer, EscapeInMiddle) {
   EXPECT_TRUE(word->quoted_);
   EXPECT_TRUE(toks[1].is<EndToken>());
 }
+
+// Additional lexer tests for better coverage
+
+TEST(Lexer, UnterminatedSingleQuote) {
+  // Test unterminated single quote (should include rest of input)
+  auto toks = lexAll("'unterminated quote");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "unterminated quote");
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}
+
+TEST(Lexer, UnterminatedDoubleQuote) {
+  // Test unterminated double quote
+  auto toks = lexAll("\"unterminated quote");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "unterminated quote");
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}
+
+TEST(Lexer, EscapeInDoubleQuote) {
+  // Test escape sequences in double quotes
+  auto toks = lexAll("\"test\\\"quote\"");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "test\"quote");
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}
+
+TEST(Lexer, TrailingEscapeInDoubleQuote) {
+  // Test trailing escape in double quote
+  auto toks = lexAll("\"test\\");
+  ASSERT_EQ(toks.size(), 2);
+  auto const* word = toks[0].getIf<WordToken>();
+  ASSERT_NE(word, nullptr);
+  EXPECT_EQ(word->text_, "test");
+  EXPECT_TRUE(word->quoted_);
+  EXPECT_TRUE(toks[1].is<EndToken>());
+}
+
+TEST(Lexer, MixedQuotes) {
+  // Test mixed quote types
+  auto toks = lexAll("'single' \"double\" unquoted");
+  ASSERT_EQ(toks.size(), 4);
+  
+  auto const* word1 = toks[0].getIf<WordToken>();
+  ASSERT_NE(word1, nullptr);
+  EXPECT_EQ(word1->text_, "single");
+  EXPECT_TRUE(word1->quoted_);
+  
+  auto const* word2 = toks[1].getIf<WordToken>();
+  ASSERT_NE(word2, nullptr);
+  EXPECT_EQ(word2->text_, "double");
+  EXPECT_TRUE(word2->quoted_);
+  
+  auto const* word3 = toks[2].getIf<WordToken>();
+  ASSERT_NE(word3, nullptr);
+  EXPECT_EQ(word3->text_, "unquoted");
+  EXPECT_FALSE(word3->quoted_);
+  
+  EXPECT_TRUE(toks[3].is<EndToken>());
+}
+
+TEST(Lexer, EmptyQuotes) {
+  // Test empty quoted strings
+  auto toks = lexAll("'' \"\"");
+  ASSERT_EQ(toks.size(), 3);
+  
+  auto const* word1 = toks[0].getIf<WordToken>();
+  ASSERT_NE(word1, nullptr);
+  EXPECT_EQ(word1->text_, "");
+  EXPECT_TRUE(word1->quoted_);
+  
+  auto const* word2 = toks[1].getIf<WordToken>();
+  ASSERT_NE(word2, nullptr);
+  EXPECT_EQ(word2->text_, "");
+  EXPECT_TRUE(word2->quoted_);
+  
+  EXPECT_TRUE(toks[2].is<EndToken>());
+}
+
+TEST(Lexer, ConsecutiveOperators) {
+  // Test consecutive operators
+  auto toks = lexAll("&&||");
+  ASSERT_EQ(toks.size(), 3);
+  EXPECT_TRUE(toks[0].is<AndIfToken>());
+  EXPECT_TRUE(toks[1].is<OrIfToken>());
+  EXPECT_TRUE(toks[2].is<EndToken>());
+}
+
+TEST(Lexer, ReservedWordInQuotes) {
+  // Test that reserved words in quotes are treated as words
+  auto toks = lexAll("'if' \"then\"");
+  ASSERT_EQ(toks.size(), 3);
+  
+  auto const* word1 = toks[0].getIf<WordToken>();
+  ASSERT_NE(word1, nullptr);
+  EXPECT_EQ(word1->text_, "if");
+  EXPECT_TRUE(word1->quoted_);
+  
+  auto const* word2 = toks[1].getIf<WordToken>();
+  ASSERT_NE(word2, nullptr);
+  EXPECT_EQ(word2->text_, "then");
+  EXPECT_TRUE(word2->quoted_);
+  
+  EXPECT_TRUE(toks[2].is<EndToken>());
+}

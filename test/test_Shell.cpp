@@ -61,9 +61,9 @@ RunResult runShellWithInput(std::string const& input) {
   }
   if (pid == 0) {
     // Child: set up stdio
-    dup3(inpipe[0], STDIN_FILENO, O_CLOEXEC);
-    dup3(outpipe[1], STDOUT_FILENO, O_CLOEXEC);
-    dup3(outpipe[1], STDERR_FILENO, O_CLOEXEC);
+    dup2(inpipe[0], STDIN_FILENO);
+    dup2(outpipe[1], STDOUT_FILENO);
+    dup2(outpipe[1], STDERR_FILENO);
     close(inpipe[0]);
     close(inpipe[1]);
     close(outpipe[0]);

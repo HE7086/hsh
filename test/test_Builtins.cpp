@@ -286,3 +286,130 @@ TEST(Builtins, EchoValidNOption) {
   EXPECT_EQ(output, "test"); // No newline due to -n
   EXPECT_EQ(last_status, 0);
 }
+
+// POSIX compliance tests
+
+TEST(Builtins, ExitDefaultsToZero) {
+  // POSIX: exit with no arguments should exit with code 0
+  std::vector<std::string> args = {"exit"};
+  EXPECT_EXIT(hsh::builtin::exit(args), ::testing::ExitedWithCode(0), "");
+}
+
+TEST(Builtins, ExportNoArgs) {
+  // POSIX: export with no arguments should print environment
+  using testing::internal::CaptureStdout;
+  using testing::internal::GetCapturedStdout;
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"export"};
+  CaptureStdout();
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  std::string output = GetCapturedStdout();
+  EXPECT_FALSE(output.empty()); // Should contain environment variables
+  EXPECT_EQ(last_status, 0);
+}
+
+TEST(Builtins, ExportNameOnly) {
+  // POSIX: export NAME should mark variable for export
+  int last_status = 0;
+  
+  // First set a variable in the environment
+  setenv("HSH_TEST_EXPORT_NAME", "testvalue", 1);
+  
+  std::vector<std::string> args = {"export", "HSH_TEST_EXPORT_NAME"};
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  EXPECT_EQ(last_status, 0);
+  
+  // Variable should still be accessible
+  char const* v = std::getenv("HSH_TEST_EXPORT_NAME");
+  ASSERT_NE(v, nullptr);
+  EXPECT_STREQ(v, "testvalue");
+}
+
+TEST(Builtins, CDNoArgs) {
+  // POSIX: cd with no arguments should go to HOME
+  std::unique_ptr<char, void (*)(void*)> oldcwd(getcwd(nullptr, 0), std::free);
+  ASSERT_NE(oldcwd.get(), nullptr);
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"cd"};
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  EXPECT_EQ(last_status, 0);
+  
+  // Should be in HOME directory
+  char const* home = std::getenv("HOME");
+  if (home) {
+    std::array<char, 1024> cwd{};
+    getcwd(cwd.data(), sizeof(cwd));
+    EXPECT_STREQ(cwd.data(), home);
+  }
+  
+  // Restore
+  ASSERT_EQ(chdir(oldcwd.get()), 0);
+}
+
+TEST(Builtins, CDNoHome) {
+  // Test cd behavior when HOME is not set
+  std::unique_ptr<char, void (*)(void*)> oldcwd(getcwd(nullptr, 0), std::free);
+  ASSERT_NE(oldcwd.get(), nullptr);
+  
+  char const* old_home = std::getenv("HOME");
+  unsetenv("HOME");
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"cd"};
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  
+  // Should go to root directory when HOME is not set
+  std::array<char, 1024> cwd{};
+  getcwd(cwd.data(), sizeof(cwd));
+  EXPECT_STREQ(cwd.data(), "/");
+  
+  // Restore
+  ASSERT_EQ(chdir(oldcwd.get()), 0);
+  if (old_home) {
+    setenv("HOME", old_home, 1);
+  }
+}
+
+TEST(Builtins, UnaliasNoArgs) {
+  // POSIX: unalias with no arguments should show usage
+  using testing::internal::CaptureStderr;
+  using testing::internal::GetCapturedStderr;
+  
+  int last_status = 0;
+  std::vector<std::string> args = {"unalias"};
+  CaptureStderr();
+  EXPECT_TRUE(hsh::handleBuiltin(args, last_status));
+  std::string err = GetCapturedStderr();
+  EXPECT_NE(err.find("usage"), std::string::npos);
+  EXPECT_NE(last_status, 0);
+}
+
+TEST(Builtins, AliasEmptyExpansion) {
+  // Test alias that expands to empty string
+  int last_status = 0;
+  std::vector<std::string> def = {"alias", "empty="};
+  EXPECT_TRUE(hsh::handleBuiltin(def, last_status));
+  EXPECT_EQ(last_status, 0);
+  
+  std::vector<std::string> cmd = {"empty", "arg"};
+  hsh::expandAliases(cmd);
+  // Empty alias should remove the command word
+  ASSERT_EQ(cmd.size(), 1);
+  EXPECT_EQ(cmd[0], "arg");
+}
+
+TEST(Builtins, AliasRecursionLimit) {
+  // Test alias recursion prevention
+  int last_status = 0;
+  std::vector<std::string> def1 = {"alias", "a=b"};
+  std::vector<std::string> def2 = {"alias", "b=a"};
+  EXPECT_TRUE(hsh::handleBuiltin(def1, last_status));
+  EXPECT_TRUE(hsh::handleBuiltin(def2, last_status));
+  
+  std::vector<std::string> cmd = {"a"};
+  hsh::expandAliases(cmd);
+  // Should stop expansion after reasonable iterations
+  EXPECT_TRUE(cmd[0] == "a" || cmd[0] == "b"); // Should be one of the two
+}

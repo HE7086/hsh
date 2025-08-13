@@ -99,4 +99,69 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
+TEST(Util, ExpandParametersBasic) {
+  // Test basic $VAR expansion
+  setenv("HSH_TEST_VAR", "hello", 1);
+  std::string result = hsh::expandParameters("$HSH_TEST_VAR world", 0);
+  EXPECT_EQ(result, "hello world");
+}
+
+TEST(Util, ExpandParametersBrace) {
+  // Test ${VAR} expansion
+  setenv("HSH_TEST_BRACE", "value", 1);
+  std::string result = hsh::expandParameters("${HSH_TEST_BRACE}suffix", 0);
+  EXPECT_EQ(result, "valuesuffix");
+}
+
+TEST(Util, ExpandParametersStatus) {
+  // Test $? expansion
+  std::string result = hsh::expandParameters("exit code: $?", 42);
+  EXPECT_EQ(result, "exit code: 42");
+}
+
+TEST(Util, ExpandParametersInSingleQuotes) {
+  // Test that expansion is disabled in single quotes
+  setenv("HSH_TEST_SINGLE", "value", 1);
+  std::string result = hsh::expandParameters("'$HSH_TEST_SINGLE'", 0);
+  EXPECT_EQ(result, "'$HSH_TEST_SINGLE'");
+}
+
+TEST(Util, ExpandParametersInDoubleQuotes) {
+  // Test that expansion works in double quotes
+  setenv("HSH_TEST_DOUBLE", "value", 1);
+  std::string result = hsh::expandParameters("\"$HSH_TEST_DOUBLE\"", 0);
+  EXPECT_EQ(result, "\"value\"");
+}
+
+TEST(Util, ExpandParametersUnsetVariable) {
+  // Test expansion of unset variable (should become empty)
+  unsetenv("HSH_TEST_UNSET");
+  std::string result = hsh::expandParameters("before${HSH_TEST_UNSET}after", 0);
+  EXPECT_EQ(result, "beforeafter");
+}
+
+TEST(Util, ExpandParametersInvalidBrace) {
+  // Test unclosed brace (should emit $ and continue)
+  std::string result = hsh::expandParameters("${unclosed", 0);
+  EXPECT_EQ(result, "${unclosed");
+}
+
+TEST(Util, ExpandParametersEscapedDollar) {
+  // Test escaped dollar sign (escapes are preserved in this function)
+  std::string result = hsh::expandParameters("\\$not_expanded", 0);
+  EXPECT_EQ(result, "\\$not_expanded");
+}
+
+TEST(Util, ExpandParametersTrailingDollar) {
+  // Test trailing dollar sign
+  std::string result = hsh::expandParameters("test$", 0);
+  EXPECT_EQ(result, "test$");
+}
+
+TEST(Util, ExpandParametersEmptyBrace) {
+  // Test empty brace expansion
+  std::string result = hsh::expandParameters("${}", 0);
+  EXPECT_EQ(result, "");
+}
+
 } // namespace
