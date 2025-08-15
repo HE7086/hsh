@@ -1,4 +1,6 @@
 CompileFlags:
+  CompilationDatabase: build
+  Add: [ -std=c++26, -Wno-binding-in-condition ]
   Remove: [ -fdeps-format=*, -fmodule-mapper=*, -fmodules-ts ]
 
 Diagnostics:

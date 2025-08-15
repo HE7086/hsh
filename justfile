@@ -4,27 +4,29 @@ alias d := debug
 alias r := run
 alias t := test
 
+export GTEST_COLOR := "1"
+export CMAKE_BUILD_TYPE := "Debug"
+
 configure:
   cmake -B build -G "Ninja Multi-Config"
 
-build MODE="Debug": configure
-  cmake --build build --config {{MODE}}
+build: configure
+  cmake --build build --config "$CMAKE_BUILD_TYPE"
 
-test MODE="Debug" *ARGS="": build
-  cmake --build build --target test_hsh
-  GTEST_COLOR=1 ctest --test-dir build -C {{MODE}} --output-on-failure {{ARGS}}
+test *ARGS: build
+  cmake --build build --target hsh_test
+  ctest --test-dir build -C "$CMAKE_BUILD_TYPE" --output-on-failure {{ARGS}}
 
-run MODE="Debug": build
-  build/src/{{MODE}}/hsh
+run *ARGS: build
+  build/src/"$CMAKE_BUILD_TYPE"/hsh {{ARGS}}
 
 debug *ARGS="": build
   #!/bin/bash
-  gdb "build/src/Debug/hsh" -ex "b main"
+  gdb "build/src/Debug/hsh" -ex "b main" {{ARGS}}
 
 fmt:
-  find src -name '*.cpp' -exec clang-format -i {} \;
-  find include -name '*.hpp' -exec clang-format -i {} \;
-  find test -name '*.cpp' -exec clang-format -i {} \;
+  find src -name '*.cpp*' -exec clang-format -i {} \;
+  find test -name '*.cpp*' -exec clang-format -i {} \;
 
 clean:
   rm -rf build .cache

@@ -17,22 +17,27 @@ Checks: >
   -modernize-use-designated-initializers,
   -concurrency-mt-unsafe,
   -performance-enum-size,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -bugprone-easily-swappable-parameters,
+  -readability-convert-member-functions-to-static,
+  -misc-const-correctness,
 
 CheckOptions:
   - key:             readability-identifier-naming.NamespaceCase
     value:           lower_case
   - key:             readability-identifier-naming.ClassCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.StructCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.UnionCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.ConceptCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.FunctionCase
-    value:           camelBack
+    value:           lower_case
   - key:             readability-identifier-naming.MethodCase
-    value:           camelBack
+    value:           lower_case
   - key:             readability-identifier-naming.VariableCase
     value:           lower_case
   - key:             readability-identifier-naming.MemberCase
@@ -42,11 +47,11 @@ CheckOptions:
   - key:             readability-identifier-naming.ParameterCase
     value:           lower_case
   - key:             readability-identifier-naming.TypeAliasCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.EnumCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.EnumConstantCase
-    value:           UpperCamelCase
+    value:           CamelCase
   - key:             readability-identifier-naming.ConstantCase
     value:           UPPER_CASE
   - key:             readability-identifier-naming.ConstantMemberCase
@@ -66,7 +71,7 @@ CheckOptions:
     value:           0
 
   - key:             readability-function-cognitive-complexity.Threshold
-    value:           100
+    value:           1000
 
 HeaderFilterRegex: '.*'
 FormatStyle: 'file'
