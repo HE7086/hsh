@@ -1,8 +1,13 @@
 module;
 
+#include <cstdio>
 #include <span>
 #include <string>
+
+#include <unistd.h>
+
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 module hsh.shell;
 
@@ -16,16 +21,18 @@ int set_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 2 && (args[1] == "-o" || args[1] == "+o")) {
     bool pf = state.is_pipefail();
     if (args[1] == "-o") {
-      fmt::println("pipefail\t{}", pf ? "on" : "off");
+      std::string output = "pipefail\t" + std::string(pf ? "on" : "off") + "\n";
+      write(STDOUT_FILENO, output.data(), output.size());
       return 0;
     }
-    fmt::println("set {}o pipefail", pf ? "-" : "+");
+    std::string output = fmt::format("set {}o pipefail\n", pf ? "-" : "+");
+    write(STDOUT_FILENO, output.data(), output.size());
     return 0;
   }
 
   if (args.size() == 3 && (args[1] == "-o" || args[1] == "+o")) {
     if (args[2] == "pipefail") {
-      bool enable = (args[1] == "-o");
+      bool enable = args[1] == "-o";
       state.set_pipefail(enable);
       return 0;
     }

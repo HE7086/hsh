@@ -1,12 +1,15 @@
 module;
 
+#include <cstdio>
 #include <cstdlib>
 #include <span>
 #include <string>
 #include <string_view>
-#include <fmt/core.h>
 
 #include <unistd.h>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 import hsh.core;
 
@@ -20,7 +23,8 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 1) {
     if (environ != nullptr) {
       for (char** e = environ; *e != nullptr; ++e) {
-        fmt::println("{}", *e);
+        std::string output = fmt::format("{}\n", *e);
+        write(STDOUT_FILENO, output.data(), output.size());
       }
     }
     return 0;
@@ -34,7 +38,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
 
     if (pos == std::string::npos) {
       name = token;
-      if (!hsh::core::is_valid_identifier(name)) {
+      if (!core::is_valid_identifier(name)) {
         fmt::println(stderr, "export: not a valid identifier: {}", name);
         status = 1;
         continue;
@@ -44,7 +48,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
         existing_value = *shell_var;
       } else {
         char const* env_val = std::getenv(name.c_str());
-        existing_value      = (env_val != nullptr) ? env_val : "";
+        existing_value      = env_val != nullptr ? env_val : "";
       }
 
       if (setenv(name.c_str(), existing_value.c_str(), 1) != 0) {

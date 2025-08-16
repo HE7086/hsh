@@ -20,46 +20,54 @@ class FileDescriptor {
 
 public:
   constexpr FileDescriptor() noexcept = default;
-  
-  explicit constexpr FileDescriptor(int fd) noexcept : fd_(fd) {}
-  
+
+  explicit constexpr FileDescriptor(int fd) noexcept
+      : fd_(fd) {}
+
   ~FileDescriptor() noexcept {
     close();
   }
 
-  FileDescriptor(FileDescriptor const&) = delete;
+  FileDescriptor(FileDescriptor const&)            = delete;
   FileDescriptor& operator=(FileDescriptor const&) = delete;
 
-  FileDescriptor(FileDescriptor&& other) noexcept : fd_(other.fd_) {
+  FileDescriptor(FileDescriptor&& other) noexcept
+      : fd_(other.fd_) {
     other.fd_ = -1;
   }
 
   FileDescriptor& operator=(FileDescriptor&& other) noexcept {
     if (this != &other) {
       close();
-      fd_ = other.fd_;
+      fd_       = other.fd_;
       other.fd_ = -1;
     }
     return *this;
   }
 
-  [[nodiscard]] constexpr int get() const noexcept { return fd_; }
-  
-  [[nodiscard]] constexpr bool is_valid() const noexcept { return fd_ != -1; }
-  
-  constexpr explicit operator bool() const noexcept { return is_valid(); }
-  
+  [[nodiscard]] constexpr int get() const noexcept {
+    return fd_;
+  }
+
+  [[nodiscard]] constexpr bool is_valid() const noexcept {
+    return fd_ != -1;
+  }
+
+  constexpr explicit operator bool() const noexcept {
+    return is_valid();
+  }
+
   [[nodiscard]] constexpr int release() noexcept {
     int fd = fd_;
-    fd_ = -1;
+    fd_    = -1;
     return fd;
   }
-  
+
   void reset(int fd = -1) noexcept {
     close();
     fd_ = fd;
   }
-  
+
   void close() noexcept;
 
   static FileDescriptor open_read(char const* path) noexcept;
@@ -204,7 +212,7 @@ class Process {
   FileDescriptor stdout_fd_;
   FileDescriptor stderr_fd_;
 
-  std::vector<Redirection>     redirections_;
+  std::vector<Redirection>    redirections_;
   std::vector<FileDescriptor> redirection_fds_;
 
 public:

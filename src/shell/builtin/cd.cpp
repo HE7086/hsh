@@ -1,11 +1,13 @@
 module;
 
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <span>
 #include <string>
 #include <system_error>
 #include <fmt/core.h>
+#include <unistd.h>
 
 import hsh.core;
 
@@ -35,11 +37,13 @@ int cd_cmd(ShellState& state, std::span<std::string const> args) {
   } else if (args.size() == 2) {
     if (args[1] == "-") {
       if (!state.last_dir_.empty()) {
-        target = state.last_dir_;
-        fmt::println("{}", target.string());
+        target             = state.last_dir_;
+        std::string output = target.string() + "\n";
+        write(STDOUT_FILENO, output.data(), output.size());
       } else if (char const* oldpwd = std::getenv(core::OLDPWD_VAR.data())) {
-        target = path(oldpwd);
-        fmt::println("{}", target.string());
+        target             = path(oldpwd);
+        std::string output = target.string() + "\n";
+        write(STDOUT_FILENO, output.data(), output.size());
       } else {
         fmt::println(stderr, "cd: OLDPWD not set");
         return 1;

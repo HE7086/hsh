@@ -1,8 +1,9 @@
 module;
 
+#include <cstdio>
 #include <span>
 #include <string>
-#include <fmt/core.h>
+#include <unistd.h>
 
 module hsh.shell;
 
@@ -20,14 +21,14 @@ int echo_cmd(ShellState&, std::span<std::string const> args) {
 
   for (; i < args.size(); ++i) {
     if (!first) {
-      fmt::print(" ");
+      write(STDOUT_FILENO, " ", 1);
     }
-    fmt::print("{}", args[i]);
+    write(STDOUT_FILENO, args[i].data(), args[i].size());
     first = false;
   }
 
   if (!suppress_newline) {
-    fmt::println("");
+    write(STDOUT_FILENO, "\n", 1);
   }
 
   return 0;

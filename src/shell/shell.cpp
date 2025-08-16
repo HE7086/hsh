@@ -11,6 +11,7 @@ module;
 #include <vector>
 #include <fmt/core.h>
 
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -21,6 +22,107 @@ import hsh.process;
 module hsh.shell;
 
 namespace hsh::shell {
+
+namespace {
+
+// Helper class to manage file descriptor redirection for builtin commands
+class BuiltinRedirectionGuard {
+private:
+  struct SavedRedirection {
+    int target_fd;
+    int saved_fd;
+  };
+
+  std::vector<SavedRedirection> saved_redirections_;
+  bool                          active_ = false;
+
+public:
+  BuiltinRedirectionGuard() = default;
+
+  ~BuiltinRedirectionGuard() {
+    restore();
+  }
+
+  bool setup(std::span<process::Redirection const> redirections) {
+    if (active_) {
+      return false;
+    }
+
+    for (auto const& redir : redirections) {
+      int fd        = -1;
+      int target_fd = -1;
+
+      // Open the target file
+      switch (redir.kind_) {
+        case process::RedirectionKind::InputRedirect:
+          fd        = open(redir.target_.c_str(), O_RDONLY);
+          target_fd = STDIN_FILENO;
+          break;
+        case process::RedirectionKind::OutputRedirect:
+          fd        = open(redir.target_.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+          target_fd = redir.fd_ ? *redir.fd_ : STDOUT_FILENO;
+          break;
+        case process::RedirectionKind::AppendRedirect:
+          fd        = open(redir.target_.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+          target_fd = redir.fd_ ? *redir.fd_ : STDOUT_FILENO;
+          break;
+        case process::RedirectionKind::HereDoc:
+        case process::RedirectionKind::HereDocNoDash:
+          // Heredoc not implemented yet
+          continue;
+      }
+
+      if (fd == -1 || target_fd == -1) {
+        restore();
+        return false;
+      }
+
+      // Save the original file descriptor
+      int saved_fd = dup(target_fd);
+      if (saved_fd == -1) {
+        close(fd);
+        restore();
+        return false;
+      }
+
+      // Redirect the target file descriptor
+      if (dup2(fd, target_fd) == -1) {
+        close(fd);
+        close(saved_fd);
+        restore();
+        return false;
+      }
+
+      saved_redirections_.push_back({target_fd, saved_fd});
+      close(fd); // Close the original fd since it's been dup2'd
+    }
+
+    active_ = true;
+    return true;
+  }
+
+  void restore() {
+    if (!active_) {
+      return;
+    }
+
+    // Restore original file descriptors in reverse order
+    for (auto it = saved_redirections_.rbegin(); it != saved_redirections_.rend(); ++it) {
+      dup2(it->saved_fd, it->target_fd);
+      close(it->saved_fd);
+    }
+
+    saved_redirections_.clear();
+    active_ = false;
+  }
+
+  BuiltinRedirectionGuard(BuiltinRedirectionGuard const&)            = delete;
+  BuiltinRedirectionGuard& operator=(BuiltinRedirectionGuard const&) = delete;
+  BuiltinRedirectionGuard(BuiltinRedirectionGuard&&)                 = delete;
+  BuiltinRedirectionGuard& operator=(BuiltinRedirectionGuard&&)      = delete;
+};
+
+} // anonymous namespace
 
 Shell::Shell()
     : executor_{std::make_unique<process::PipelineExecutor>()}, builtins_{std::make_unique<BuiltinRegistry>()} {
@@ -143,7 +245,19 @@ ExecutionResult Shell::execute_command_string(std::string_view input, ExecutionC
     } else if (commands.size() == 1 && !commands.front().args_.empty()) {
       auto const& argv0 = commands.front().args_.front();
       if (auto bi = builtins_->find(argv0)) {
-        int                    rc = bi->get()(shell_state_, std::span<std::string const>(commands.front().args_));
+        // Handle redirection for builtin commands
+        BuiltinRedirectionGuard redir_guard;
+        bool                    redir_success = true;
+
+        if (!commands.front().redirections_.empty()) {
+          redir_success = redir_guard.setup(std::span(commands.front().redirections_));
+        }
+
+        int rc = 1; // Default to error if redirection fails
+        if (redir_success) {
+          rc = bi->get()(shell_state_, std::span<std::string const>(commands.front().args_));
+        }
+
         process::ProcessResult pr(rc, process::ProcessStatus::Completed);
         result = process::PipelineResult({pr}, rc == 0, rc);
       } else {
@@ -246,7 +360,19 @@ ExecutionResult Shell::execute_command_string(std::string_view input, ExecutionC
           if (right_commands.size() == 1 && !right_commands.front().args_.empty()) {
             auto const& argv0 = right_commands.front().args_.front();
             if (auto bi = builtins_->find(argv0)) {
-              int rc = bi->get()(shell_state_, std::span<std::string const>(right_commands.front().args_));
+              // Handle redirection for builtin commands
+              BuiltinRedirectionGuard redir_guard;
+              bool                    redir_success = true;
+
+              if (!right_commands.front().redirections_.empty()) {
+                redir_success = redir_guard.setup(std::span(right_commands.front().redirections_));
+              }
+
+              int rc = 1; // Default to error if redirection fails
+              if (redir_success) {
+                rc = bi->get()(shell_state_, std::span<std::string const>(right_commands.front().args_));
+              }
+
               process::ProcessResult pr(rc, process::ProcessStatus::Completed);
               result = process::PipelineResult({pr}, (rc == 0), rc);
             } else {
