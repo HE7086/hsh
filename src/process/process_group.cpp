@@ -72,6 +72,14 @@ bool ProcessGroup::start_all() {
   for (size_t i = 0; i < processes_.size(); ++i) {
     auto& process = processes_[i];
 
+    if (i == 0) {
+      // First process becomes the process group leader
+      group_id_ = 0; // Will be updated after process starts
+      process->set_process_group(0);
+    } else {
+      process->set_process_group(group_id_);
+    }
+
     if (!process->start()) {
       all_started = false;
       fmt::println(stderr, "Failed to start process");
@@ -81,15 +89,15 @@ bool ProcessGroup::start_all() {
     pid_t child_pid = process->pid();
 
     if (i == 0) {
-      // First child becomes the process group leader
       group_id_      = child_pid;
       group_created_ = true;
 
-      if (setpgid(child_pid, child_pid) == -1) {
+      if (setpgid(child_pid, child_pid) == -1 && errno != EACCES) {
+        // EACCES if child already set the process group
         fmt::println(stderr, "setpgid failed for process group leader: {}", strerror(errno));
       }
     } else {
-      if (setpgid(child_pid, group_id_) == -1) {
+      if (setpgid(child_pid, group_id_) == -1 && errno != EACCES) {
         fmt::println(stderr, "setpgid failed for child process: {}", strerror(errno));
       }
     }

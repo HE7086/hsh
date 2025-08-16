@@ -7,8 +7,8 @@ module;
 #include <cstring>
 #include <optional>
 #include <span>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include <fcntl.h>
 #include <spawn.h>
@@ -287,12 +287,15 @@ bool Process::setup_spawn_file_actions(posix_spawn_file_actions_t* file_actions)
   }
   for (int fd = 3; fd < maxfd; ++fd) {
     bool is_redirected_fd = false;
-    if (stdin_fd_ && fd == stdin_fd_.get())
+    if (stdin_fd_ && fd == stdin_fd_.get()) {
       is_redirected_fd = true;
-    if (stdout_fd_ && fd == stdout_fd_.get())
+    }
+    if (stdout_fd_ && fd == stdout_fd_.get()) {
       is_redirected_fd = true;
-    if (stderr_fd_ && fd == stderr_fd_.get())
+    }
+    if (stderr_fd_ && fd == stderr_fd_.get()) {
       is_redirected_fd = true;
+    }
 
     for (auto const& redir_fd : redirection_fds_) {
       if (redir_fd && fd == redir_fd.get()) {
@@ -319,6 +322,8 @@ bool Process::setup_spawn_file_actions(posix_spawn_file_actions_t* file_actions)
 bool Process::setup_spawn_attributes(posix_spawnattr_t* attrs) const {
   short flags = 0;
 
+  // process_group_ == 0 -> new process group
+  // process_group_ > 0  -> join existing group
   if (process_group_ != -1) {
     flags |= POSIX_SPAWN_SETPGROUP;
     if (int err = posix_spawnattr_setpgroup(attrs, process_group_)) {
@@ -338,14 +343,6 @@ bool Process::setup_spawn_attributes(posix_spawnattr_t* attrs) const {
 }
 
 bool Process::setup_child_process() const {
-  if (process_group_ != -1) {
-    if (setpgid(0, process_group_) == -1) {
-      // setpgid failure is not fatal in all environments
-      // Cannot use fmt::println here - not async-signal-safe
-      // TODO
-    }
-  }
-
   if (stdin_fd_) {
     if (dup2(stdin_fd_.get(), STDIN_FILENO) == -1) {
       return false;
