@@ -11,6 +11,8 @@ module;
 #include <unordered_map>
 #include <vector>
 
+#include <spawn.h>
+
 export module hsh.process;
 
 export namespace hsh::process {
@@ -233,9 +235,9 @@ public:
 
   std::optional<ProcessResult> try_wait();
 
-  bool terminate() const;
+  [[nodiscard]] bool terminate() const;
 
-  bool kill() const;
+  [[nodiscard]] bool kill() const;
 
   [[nodiscard]] bool is_running() const noexcept;
 
@@ -272,11 +274,14 @@ public:
   }
 
 private:
-  bool setup_child_process() const;
-  void cleanup() noexcept;
+  [[nodiscard]] bool setup_child_process() const;
+  void               cleanup() noexcept;
 
   bool setup_redirections();
   void close_redirection_fds() noexcept;
+
+  bool setup_spawn_file_actions(posix_spawn_file_actions_t* file_actions) const;
+  bool setup_spawn_attributes(posix_spawnattr_t* attrs) const;
 
   [[nodiscard]] std::vector<char*>           create_argv() const;
   [[nodiscard]] std::optional<ProcessResult> process_wait_result_from_status(int wait_status);
@@ -366,9 +371,9 @@ public:
 
   bool start_all();
 
-  std::vector<ProcessResult> wait_all() const;
+  [[nodiscard]] std::vector<ProcessResult> wait_all() const;
 
-  std::vector<std::optional<ProcessResult>> try_wait_all() const;
+  [[nodiscard]] std::vector<std::optional<ProcessResult>> try_wait_all() const;
 
   bool terminate_all();
 
@@ -395,7 +400,7 @@ public:
     return is_background_;
   }
 
-  PipelineResult wait_for_completion() const;
+  [[nodiscard]] PipelineResult wait_for_completion() const;
 
 private:
   void cleanup();

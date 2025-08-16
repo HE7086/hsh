@@ -10,6 +10,7 @@ module;
 #include <vector>
 
 #include <fcntl.h>
+#include <spawn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -17,10 +18,13 @@ module;
 #include <fmt/core.h>
 
 import hsh.core;
-
 module hsh.process;
 
 namespace hsh::process {
+
+extern "C" {
+  extern char** environ;
+}
 
 Process::Process(std::span<std::string const> args, std::optional<std::string> working_dir)
     : args_(args.begin(), args.end()), working_dir_(std::move(working_dir)) {}
@@ -89,21 +93,46 @@ bool Process::start() {
 
   start_time_ = std::chrono::steady_clock::now();
 
-  pid_ = fork();
-  if (pid_ == -1) {
-    fmt::println(stderr, "{}: {}", core::ERROR_FORK_FAILED, strerror(errno));
+  posix_spawn_file_actions_t file_actions;
+  int                        err = posix_spawn_file_actions_init(&file_actions);
+  if (err != 0) {
+    fmt::println(stderr, "posix_spawn_file_actions_init failed: {}", strerror(err));
     return false;
   }
 
-  if (pid_ == 0) {
-    if (!setup_child_process()) {
-      std::exit(hsh::core::EXEC_FAILURE_EXIT_CODE);
+  posix_spawnattr_t attrs;
+  err = posix_spawnattr_init(&attrs);
+  if (err != 0) {
+    posix_spawn_file_actions_destroy(&file_actions);
+    fmt::println(stderr, "posix_spawnattr_init failed: {}", strerror(err));
+    return false;
+  }
+
+  if (!setup_spawn_file_actions(&file_actions)) {
+    posix_spawnattr_destroy(&attrs);
+    posix_spawn_file_actions_destroy(&file_actions);
+    return false;
+  }
+
+  if (!setup_spawn_attributes(&attrs)) {
+    posix_spawnattr_destroy(&attrs);
+    posix_spawn_file_actions_destroy(&file_actions);
+    return false;
+  }
+
+  err = posix_spawnp(&pid_, argv[0], &file_actions, &attrs, argv.data(), environ);
+
+  posix_spawnattr_destroy(&attrs);
+  posix_spawn_file_actions_destroy(&file_actions);
+
+  if (err != 0) {
+    if (err == ENOENT) {
+      status_ = ProcessStatus::Completed;
+      pid_    = -1;
+      return true;
     }
-
-    execvp(argv[0], argv.data());
-
-    write(STDERR_FILENO, core::ERROR_EXECVP_FAILED.data(), core::ERROR_EXECVP_FAILED.size());
-    std::exit(core::EXEC_FAILURE_EXIT_CODE);
+    fmt::println(stderr, "posix_spawn failed: {}", strerror(err));
+    return false;
   }
 
   status_ = ProcessStatus::Running;
@@ -111,6 +140,12 @@ bool Process::start() {
 }
 
 std::optional<ProcessResult> Process::wait() {
+  if (status_ == ProcessStatus::Completed && pid_ == -1) {
+    auto end_time       = std::chrono::steady_clock::now();
+    auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time_);
+    return ProcessResult{127, ProcessStatus::Completed, execution_time};
+  }
+
   if (status_ != ProcessStatus::Running) {
     return std::nullopt;
   }
@@ -126,6 +161,12 @@ std::optional<ProcessResult> Process::wait() {
 }
 
 std::optional<ProcessResult> Process::try_wait() {
+  if (status_ == ProcessStatus::Completed && pid_ == -1) {
+    auto end_time       = std::chrono::steady_clock::now();
+    auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time_);
+    return ProcessResult{127, ProcessStatus::Completed, execution_time};
+  }
+
   if (status_ != ProcessStatus::Running) {
     return std::nullopt;
   }
@@ -173,6 +214,126 @@ bool Process::kill() const {
 
 bool Process::is_running() const noexcept {
   return status_ == ProcessStatus::Running;
+}
+
+bool Process::setup_spawn_file_actions(posix_spawn_file_actions_t* file_actions) const {
+  if (stdin_fd_) {
+    if (int err = posix_spawn_file_actions_adddup2(file_actions, stdin_fd_.get(), STDIN_FILENO)) {
+      fmt::println(stderr, "posix_spawn_file_actions_adddup2 (stdin) failed: {}", strerror(err));
+      return false;
+    }
+    if (int err = posix_spawn_file_actions_addclose(file_actions, stdin_fd_.get())) {
+      fmt::println(stderr, "posix_spawn_file_actions_addclose (stdin) failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  if (stdout_fd_) {
+    if (int err = posix_spawn_file_actions_adddup2(file_actions, stdout_fd_.get(), STDOUT_FILENO)) {
+      fmt::println(stderr, "posix_spawn_file_actions_adddup2 (stdout) failed: {}", strerror(err));
+      return false;
+    }
+
+    if (int err = posix_spawn_file_actions_addclose(file_actions, stdout_fd_.get())) {
+      fmt::println(stderr, "posix_spawn_file_actions_addclose (stdout) failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  if (stderr_fd_) {
+    if (int err = posix_spawn_file_actions_adddup2(file_actions, stderr_fd_.get(), STDERR_FILENO)) {
+      fmt::println(stderr, "posix_spawn_file_actions_adddup2 (stderr) failed: {}", strerror(err));
+      return false;
+    }
+    if (int err = posix_spawn_file_actions_addclose(file_actions, stderr_fd_.get())) {
+      fmt::println(stderr, "posix_spawn_file_actions_addclose (stderr) failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  for (size_t i = 0; i < redirections_.size() && i < redirection_fds_.size(); ++i) {
+    auto const& redir = redirections_[i];
+    auto const& fd    = redirection_fds_[i];
+
+    if (!fd) {
+      continue;
+    }
+
+    int target_fd = -1;
+    switch (redir.kind_) {
+      case RedirectionKind::InputRedirect: target_fd = STDIN_FILENO; break;
+      case RedirectionKind::OutputRedirect:
+      case RedirectionKind::AppendRedirect: target_fd = redir.fd_ ? *redir.fd_ : STDOUT_FILENO; break;
+      case RedirectionKind::HereDoc:
+      case RedirectionKind::HereDocNoDash: target_fd = STDIN_FILENO; break;
+    }
+
+    if (target_fd != -1) {
+      if (int err = posix_spawn_file_actions_adddup2(file_actions, fd.get(), target_fd)) {
+        fmt::println(stderr, "posix_spawn_file_actions_adddup2 (redirection) failed: {}", strerror(err));
+        return false;
+      }
+      if (int err = posix_spawn_file_actions_addclose(file_actions, fd.get())) {
+        fmt::println(stderr, "posix_spawn_file_actions_addclose (redirection) failed: {}", strerror(err));
+        return false;
+      }
+    }
+  }
+
+  long maxfd = sysconf(_SC_OPEN_MAX);
+  if (maxfd < 0) {
+    maxfd = 1024;
+  }
+  for (int fd = 3; fd < maxfd; ++fd) {
+    bool is_redirected_fd = false;
+    if (stdin_fd_ && fd == stdin_fd_.get())
+      is_redirected_fd = true;
+    if (stdout_fd_ && fd == stdout_fd_.get())
+      is_redirected_fd = true;
+    if (stderr_fd_ && fd == stderr_fd_.get())
+      is_redirected_fd = true;
+
+    for (auto const& redir_fd : redirection_fds_) {
+      if (redir_fd && fd == redir_fd.get()) {
+        is_redirected_fd = true;
+        break;
+      }
+    }
+
+    if (!is_redirected_fd) {
+      posix_spawn_file_actions_addclose(file_actions, fd);
+    }
+  }
+
+  if (working_dir_.has_value()) {
+    if (int err = posix_spawn_file_actions_addchdir_np(file_actions, working_dir_->c_str())) {
+      fmt::println(stderr, "posix_spawn_file_actions_addchdir_np failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Process::setup_spawn_attributes(posix_spawnattr_t* attrs) const {
+  short flags = 0;
+
+  if (process_group_ != -1) {
+    flags |= POSIX_SPAWN_SETPGROUP;
+    if (int err = posix_spawnattr_setpgroup(attrs, process_group_)) {
+      fmt::println(stderr, "posix_spawnattr_setpgroup failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  if (flags != 0) {
+    if (int err = posix_spawnattr_setflags(attrs, flags)) {
+      fmt::println(stderr, "posix_spawnattr_setflags failed: {}", strerror(err));
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool Process::setup_child_process() const {
