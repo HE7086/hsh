@@ -16,8 +16,8 @@ export module hsh.core;
 export namespace hsh::core {
 
 // Version information
-constexpr std::string_view VERSION    = "0.0.1-dev";
-constexpr std::string_view BUILD_DATE = __DATE__;
+constexpr std::string VERSION    = "0.0.1-dev";
+// constexpr std::string BUILD_DATE = __DATE__;
 
 // Shell behavior constants
 constexpr size_t DEFAULT_HISTORY_SIZE        = 10000;
@@ -42,19 +42,11 @@ std::chrono::milliseconds const PROCESS_CLEANUP_DELAY(100);
 std::chrono::seconds const      SIGTERM_TIMEOUT(5);
 
 // File system constants
-constexpr std::string_view HOME_DIR_VAR = "HOME";
-constexpr std::string_view PWD_VAR      = "PWD";
-constexpr std::string_view OLDPWD_VAR   = "OLDPWD";
-constexpr std::string_view PATH_VAR     = "PATH";
-
-// Error messages
-constexpr std::string_view ERROR_EMPTY_ARGV          = "Process::start() error: empty argv";
-constexpr std::string_view ERROR_FAILED_CREATE_ARGV  = "Process::start() error: failed to create argv";
-constexpr std::string_view ERROR_FORK_FAILED         = "fork() failed";
-constexpr std::string_view ERROR_WAITPID_FAILED      = "waitpid() failed";
-constexpr std::string_view ERROR_KILL_SIGTERM_FAILED = "kill(SIGTERM) failed";
-constexpr std::string_view ERROR_KILL_SIGKILL_FAILED = "kill(SIGKILL) failed";
-constexpr std::string_view ERROR_EXECVP_FAILED       = "execvp failed\n";
+constexpr std::string HOME_DIR_VAR = "HOME";
+constexpr std::string PWD_VAR      = "PWD";
+constexpr std::string OLDPWD_VAR   = "OLDPWD";
+constexpr std::string PATH_VAR     = "PATH";
+constexpr std::string SHELL_VAR    = "SHELL";
 
 // Global locale instance for consistent character operations
 class LocaleManager {
@@ -95,9 +87,9 @@ public:
   EnvironmentManager(EnvironmentManager&&) noexcept            = delete;
   EnvironmentManager& operator=(EnvironmentManager&&) noexcept = delete;
 
-  [[nodiscard]] std::optional<std::string>                       get(std::string_view name);
-  void                                                           set(std::string_view name, std::string_view value);
-  void                                                           unset(std::string_view name);
+  [[nodiscard]] std::optional<std::string>                       get(std::string const& name);
+  void                                                           set(std::string const& name, std::string const& value);
+  void                                                           unset(std::string const& name);
   [[nodiscard]] std::vector<std::pair<std::string, std::string>> list();
   void                                                           clear_cache();
 
@@ -105,7 +97,7 @@ public:
 };
 
 // User directory utilities
-std::optional<std::string> home_for_user(std::string_view user);
+std::optional<std::string> home_for_user(std::string const& user);
 std::optional<std::string> current_user_home();
 
 // Identifier validation

@@ -4,21 +4,18 @@ alias d := debug
 alias r := run
 alias t := test
 
-export GTEST_COLOR := "1"
-export CMAKE_BUILD_TYPE := "Debug"
-
 configure:
   cmake -B build -G "Ninja Multi-Config"
 
 build: configure
-  cmake --build build --config "$CMAKE_BUILD_TYPE"
+  cmake --build build --config Debug
 
 test *ARGS: build
   cmake --build build --target hsh_test
-  ctest --test-dir build -C "$CMAKE_BUILD_TYPE" --output-on-failure {{ARGS}}
+  ctest --test-dir build -C Debug --output-on-failure {{ARGS}}
 
 run *ARGS: build
-  build/src/"$CMAKE_BUILD_TYPE"/hsh {{ARGS}}
+  build/src/Debug/hsh {{ARGS}}
 
 debug *ARGS="": build
   #!/bin/bash
