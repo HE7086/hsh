@@ -36,9 +36,9 @@ Process::Process(Process&& other) noexcept
     , process_group_(other.process_group_)
     , status_(other.status_)
     , start_time_(other.start_time_)
-    , stdin_fd_(other.stdin_fd_)
-    , stdout_fd_(other.stdout_fd_)
-    , stderr_fd_(other.stderr_fd_)
+    , stdin_fd_(std::move(other.stdin_fd_))
+    , stdout_fd_(std::move(other.stdout_fd_))
+    , stderr_fd_(std::move(other.stderr_fd_))
     , redirections_(std::move(other.redirections_))
     , redirection_fds_(std::move(other.redirection_fds_)) {
   other.pid_    = -1;
@@ -55,9 +55,9 @@ Process& Process::operator=(Process&& other) noexcept {
     process_group_   = other.process_group_;
     status_          = other.status_;
     start_time_      = other.start_time_;
-    stdin_fd_        = other.stdin_fd_;
-    stdout_fd_       = other.stdout_fd_;
-    stderr_fd_       = other.stderr_fd_;
+    stdin_fd_        = std::move(other.stdin_fd_);
+    stdout_fd_       = std::move(other.stdout_fd_);
+    stderr_fd_       = std::move(other.stderr_fd_);
     redirections_    = std::move(other.redirections_);
     redirection_fds_ = std::move(other.redirection_fds_);
 
@@ -184,32 +184,32 @@ bool Process::setup_child_process() const {
     }
   }
 
-  if (stdin_fd_ != -1) {
-    if (dup2(stdin_fd_, STDIN_FILENO) == -1) {
+  if (stdin_fd_) {
+    if (dup2(stdin_fd_.get(), STDIN_FILENO) == -1) {
       return false;
     }
-    close(stdin_fd_);
+    close(stdin_fd_.get());
   }
 
-  if (stdout_fd_ != -1) {
-    if (dup2(stdout_fd_, STDOUT_FILENO) == -1) {
+  if (stdout_fd_) {
+    if (dup2(stdout_fd_.get(), STDOUT_FILENO) == -1) {
       return false;
     }
-    close(stdout_fd_);
+    close(stdout_fd_.get());
   }
 
-  if (stderr_fd_ != -1) {
-    if (dup2(stderr_fd_, STDERR_FILENO) == -1) {
+  if (stderr_fd_) {
+    if (dup2(stderr_fd_.get(), STDERR_FILENO) == -1) {
       return false;
     }
-    close(stderr_fd_);
+    close(stderr_fd_.get());
   }
 
   for (size_t i = 0; i < redirections_.size() && i < redirection_fds_.size(); ++i) {
     auto const& redir = redirections_[i];
-    int         fd    = redirection_fds_[i];
+    auto const& fd    = redirection_fds_[i];
 
-    if (fd == -1) {
+    if (!fd) {
       continue;
     }
 
@@ -223,10 +223,10 @@ bool Process::setup_child_process() const {
     }
 
     if (target_fd != -1) {
-      if (dup2(fd, target_fd) == -1) {
+      if (dup2(fd.get(), target_fd) == -1) {
         return false;
       }
-      close(fd);
+      close(fd.get());
     }
   }
 
@@ -305,32 +305,29 @@ bool Process::setup_redirections() {
   redirection_fds_.reserve(redirections_.size());
 
   for (auto const& redir : redirections_) {
-    int fd = -1;
+    FileDescriptor fd;
 
     switch (redir.kind_) {
       case RedirectionKind::InputRedirect: {
-        fd = open(redir.target_.c_str(), O_RDONLY | O_CLOEXEC);
-        if (fd == -1) {
-          fmt::println(stderr, "hsh: {}: {}", redir.target_, strerror(errno));
-          close_redirection_fds();
+        fd = FileDescriptor::open_read(redir.target_.c_str());
+        if (!fd) {
+          redirection_fds_.clear();
           return false;
         }
         break;
       }
       case RedirectionKind::OutputRedirect: {
-        fd = open(redir.target_.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
-        if (fd == -1) {
-          fmt::println(stderr, "hsh: {}: {}", redir.target_, strerror(errno));
-          close_redirection_fds();
+        fd = FileDescriptor::open_write(redir.target_.c_str());
+        if (!fd) {
+          redirection_fds_.clear();
           return false;
         }
         break;
       }
       case RedirectionKind::AppendRedirect: {
-        fd = open(redir.target_.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
-        if (fd == -1) {
-          fmt::println(stderr, "hsh: {}: {}", redir.target_, strerror(errno));
-          close_redirection_fds();
+        fd = FileDescriptor::open_append(redir.target_.c_str());
+        if (!fd) {
+          redirection_fds_.clear();
           return false;
         }
         break;
@@ -339,23 +336,17 @@ bool Process::setup_redirections() {
       case RedirectionKind::HereDocNoDash: {
         // TODO: implement heredoc
         fmt::println(stderr, "hsh: heredoc not yet implemented");
-        fd = -1;
         break;
       }
     }
 
-    redirection_fds_.push_back(fd);
+    redirection_fds_.push_back(std::move(fd));
   }
 
   return true;
 }
 
 void Process::close_redirection_fds() noexcept {
-  for (int fd : redirection_fds_) {
-    if (fd != -1) {
-      close(fd);
-    }
-  }
   redirection_fds_.clear();
 }
 

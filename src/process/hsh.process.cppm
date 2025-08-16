@@ -15,6 +15,58 @@ export module hsh.process;
 
 export namespace hsh::process {
 
+class FileDescriptor {
+  int fd_ = -1;
+
+public:
+  constexpr FileDescriptor() noexcept = default;
+  
+  explicit constexpr FileDescriptor(int fd) noexcept : fd_(fd) {}
+  
+  ~FileDescriptor() noexcept {
+    close();
+  }
+
+  FileDescriptor(FileDescriptor const&) = delete;
+  FileDescriptor& operator=(FileDescriptor const&) = delete;
+
+  FileDescriptor(FileDescriptor&& other) noexcept : fd_(other.fd_) {
+    other.fd_ = -1;
+  }
+
+  FileDescriptor& operator=(FileDescriptor&& other) noexcept {
+    if (this != &other) {
+      close();
+      fd_ = other.fd_;
+      other.fd_ = -1;
+    }
+    return *this;
+  }
+
+  [[nodiscard]] constexpr int get() const noexcept { return fd_; }
+  
+  [[nodiscard]] constexpr bool is_valid() const noexcept { return fd_ != -1; }
+  
+  constexpr explicit operator bool() const noexcept { return is_valid(); }
+  
+  [[nodiscard]] constexpr int release() noexcept {
+    int fd = fd_;
+    fd_ = -1;
+    return fd;
+  }
+  
+  void reset(int fd = -1) noexcept {
+    close();
+    fd_ = fd;
+  }
+  
+  void close() noexcept;
+
+  static FileDescriptor open_read(char const* path) noexcept;
+  static FileDescriptor open_write(char const* path) noexcept;
+  static FileDescriptor open_append(char const* path) noexcept;
+};
+
 enum class RedirectionKind {
   InputRedirect,  // <
   OutputRedirect, // >
@@ -148,12 +200,12 @@ class Process {
   ProcessStatus                         status_        = ProcessStatus::NotStarted;
   std::chrono::steady_clock::time_point start_time_;
 
-  int stdin_fd_  = -1;
-  int stdout_fd_ = -1;
-  int stderr_fd_ = -1;
+  FileDescriptor stdin_fd_;
+  FileDescriptor stdout_fd_;
+  FileDescriptor stderr_fd_;
 
-  std::vector<Redirection> redirections_;
-  std::vector<int>         redirection_fds_;
+  std::vector<Redirection>     redirections_;
+  std::vector<FileDescriptor> redirection_fds_;
 
 public:
   explicit Process(std::span<std::string const> args, std::optional<std::string> working_dir = std::nullopt);
@@ -192,13 +244,13 @@ public:
   }
 
   void set_stdin(int fd) noexcept {
-    stdin_fd_ = fd;
+    stdin_fd_.reset(fd);
   }
   void set_stdout(int fd) noexcept {
-    stdout_fd_ = fd;
+    stdout_fd_.reset(fd);
   }
   void set_stderr(int fd) noexcept {
-    stderr_fd_ = fd;
+    stderr_fd_.reset(fd);
   }
 
   void set_process_group(pid_t pgid) noexcept {

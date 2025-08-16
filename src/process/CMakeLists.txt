@@ -10,6 +10,7 @@ target_sources(hsh_process
     pipeline_executor.cpp
     process_group.cpp
     pipe_manager.cpp
+    file_descriptor.cpp
     errors.cpp
     job_controller.cpp
 )
