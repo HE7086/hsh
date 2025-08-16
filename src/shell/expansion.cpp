@@ -130,7 +130,7 @@ std::string expand_arithmetic(std::string const& word, ShellState const& state) 
 
     std::string expanded_expr = expand_variables_in_arithmetic(result.substr(start, end - start - 2), state);
 
-    if (auto eval_result = core::evaluate_simple_arithmetic(expanded_expr)) {
+    if (auto eval_result = ArithmeticEvaluator::evaluate(expanded_expr)) {
       double      value = *eval_result;
       std::string replacement;
       if (value == static_cast<int>(value)) {

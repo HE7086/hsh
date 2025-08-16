@@ -11,11 +11,14 @@ module hsh.shell;
 namespace hsh::shell {
 
 std::expected<double, std::string> ArithmeticEvaluator::evaluate(std::string_view expr) {
-  auto expr_copy = expr;
-  return parse_expression(expr_copy);
+  auto result = parse_expression(expr);
+  if (!result) {
+    return std::unexpected(result.error());
+  }
+  return result->as_float();
 }
 
-std::expected<double, std::string> ArithmeticEvaluator::parse_expression(std::string_view& expr) {
+std::expected<ArithmeticValue, std::string> ArithmeticEvaluator::parse_expression(std::string_view& expr) {
   skip_whitespace(expr);
 
   auto left = parse_term(expr);
@@ -41,16 +44,24 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_expression(std::st
     }
 
     if (op == '+') {
-      *left += *right;
+      if (left->is_float() || right->is_float()) {
+        left->value_ = left->as_float() + right->as_float();
+      } else {
+        left->value_ = left->as_integer() + right->as_integer();
+      }
     } else {
-      *left -= *right;
+      if (left->is_float() || right->is_float()) {
+        left->value_ = left->as_float() - right->as_float();
+      } else {
+        left->value_ = left->as_integer() - right->as_integer();
+      }
     }
   }
 
   return left;
 }
 
-std::expected<double, std::string> ArithmeticEvaluator::parse_term(std::string_view& expr) {
+std::expected<ArithmeticValue, std::string> ArithmeticEvaluator::parse_term(std::string_view& expr) {
   skip_whitespace(expr);
 
   auto left = parse_factor(expr);
@@ -76,24 +87,32 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_term(std::string_v
     }
 
     if (op == '*') {
-      *left *= *right;
+      if (left->is_float() || right->is_float()) {
+        left->value_ = left->as_float() * right->as_float();
+      } else {
+        left->value_ = left->as_integer() * right->as_integer();
+      }
     } else if (op == '/') {
-      if (*right == 0) {
+      if (right->as_float() == 0) {
         return std::unexpected("Division by zero");
       }
-      *left /= *right;
+      if (left->is_integer() && right->is_integer()) {
+        left->value_ = left->as_integer() / right->as_integer();
+      } else {
+        left->value_ = left->as_float() / right->as_float();
+      }
     } else { // op == '%'
-      if (*right == 0) {
+      if (right->as_integer() == 0) {
         return std::unexpected("Modulo by zero");
       }
-      *left = static_cast<int>(*left) % static_cast<int>(*right);
+      left->value_ = left->as_integer() % right->as_integer();
     }
   }
 
   return left;
 }
 
-std::expected<double, std::string> ArithmeticEvaluator::parse_factor(std::string_view& expr) {
+std::expected<ArithmeticValue, std::string> ArithmeticEvaluator::parse_factor(std::string_view& expr) {
   skip_whitespace(expr);
 
   if (expr.empty()) {
@@ -123,7 +142,12 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_factor(std::string
     if (!result) {
       return result;
     }
-    return -*result;
+    if (result->is_float()) {
+      result->value_ = -result->as_float();
+    } else {
+      result->value_ = -result->as_integer();
+    }
+    return result;
   }
 
   // unary plus
@@ -136,7 +160,7 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_factor(std::string
   return parse_number(expr);
 }
 
-std::expected<double, std::string> ArithmeticEvaluator::parse_number(std::string_view& expr) {
+std::expected<ArithmeticValue, std::string> ArithmeticEvaluator::parse_number(std::string_view& expr) {
   skip_whitespace(expr);
 
   if (expr.empty() || (!is_digit(expr[0]) && expr[0] != '.')) {
@@ -166,7 +190,11 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_number(std::string
     return std::unexpected("Invalid number format");
   }
 
-  return value;
+  if (has_dot) {
+    return ArithmeticValue{value};
+  } else {
+    return ArithmeticValue{static_cast<long>(value)};
+  }
 }
 
 void ArithmeticEvaluator::skip_whitespace(std::string_view& expr) {

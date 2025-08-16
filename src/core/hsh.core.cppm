@@ -66,9 +66,6 @@ public:
   static char to_lower(char c) noexcept;
 };
 
-// Simple arithmetic evaluator for basic expressions
-std::expected<double, std::string> evaluate_simple_arithmetic(std::string_view expr);
-
 // Environment variable utilities
 std::optional<std::string> getenv_str(char const* name);
 

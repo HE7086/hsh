@@ -6,7 +6,6 @@ target_sources(hsh_core
       hsh.core.cppm
   PRIVATE
     string_utils.cpp
-    arithmetic_utils.cpp
     locale_manager.cpp
     environment_manager.cpp
 )

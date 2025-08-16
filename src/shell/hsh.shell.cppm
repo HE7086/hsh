@@ -9,6 +9,7 @@ module;
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <variant>
 
 export module hsh.shell;
 
@@ -67,6 +68,34 @@ private:
 
 void register_default_builtins(BuiltinRegistry&);
 
+struct ArithmeticValue {
+  std::variant<double, long> value_;
+
+  explicit ArithmeticValue(double v) : value_(v) {}
+  explicit ArithmeticValue(long v) : value_(v) {}
+  explicit ArithmeticValue(int v) : value_(static_cast<long>(v)) {}
+  
+  [[nodiscard]] bool is_float() const noexcept {
+    return std::holds_alternative<double>(value_);
+  }
+  
+  [[nodiscard]] bool is_integer() const noexcept {
+    return std::holds_alternative<long>(value_);
+  }
+  
+  [[nodiscard]] double as_float() const noexcept {
+    return std::visit([](auto const& v) -> double {
+      return static_cast<double>(v);
+    }, value_);
+  }
+  
+  [[nodiscard]] long as_integer() const noexcept {
+    return std::visit([](auto const& v) -> long {
+      return static_cast<long>(v);
+    }, value_);
+  }
+};
+
 class ArithmeticEvaluator {
 public:
   ArithmeticEvaluator()  = default;
@@ -80,10 +109,10 @@ public:
   static std::expected<double, std::string> evaluate(std::string_view expr);
 
 private:
-  static std::expected<double, std::string> parse_expression(std::string_view& expr);
-  static std::expected<double, std::string> parse_term(std::string_view& expr);
-  static std::expected<double, std::string> parse_factor(std::string_view& expr);
-  static std::expected<double, std::string> parse_number(std::string_view& expr);
+  static std::expected<ArithmeticValue, std::string> parse_expression(std::string_view& expr);
+  static std::expected<ArithmeticValue, std::string> parse_term(std::string_view& expr);
+  static std::expected<ArithmeticValue, std::string> parse_factor(std::string_view& expr);
+  static std::expected<ArithmeticValue, std::string> parse_number(std::string_view& expr);
 
   static void skip_whitespace(std::string_view& expr);
   static bool is_digit(char c);

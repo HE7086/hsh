@@ -38,7 +38,9 @@ TEST_F(ArithmeticExpansionTest, BasicMultiplication) {
 
 TEST_F(ArithmeticExpansionTest, BasicDivision) {
   EXPECT_EQ(expand_arithmetic("$((8 / 2))", state_), "4");
-  EXPECT_EQ(expand_arithmetic("$((10 / 3))", state_), "3"); // Integer division
+  EXPECT_EQ(expand_arithmetic("$((10 / 3))", state_), "3");
+  EXPECT_EQ(expand_arithmetic("$((10.0 / 3))", state_), "3.3333333333333335");
+  EXPECT_EQ(expand_arithmetic("$((5.0 / 2))", state_), "2.5");
   EXPECT_EQ(expand_arithmetic("$((0 / 5))", state_), "0");
 }
 
