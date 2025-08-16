@@ -5,7 +5,9 @@ module;
 #include <string>
 #include <string_view>
 
+#if defined(__AVX2__)
 #include <immintrin.h>
+#endif
 
 import hsh.core;
 module hsh.parser;
@@ -32,8 +34,8 @@ constexpr bool is_operator_char(unsigned char c) noexcept {
   }
 }
 
-// Attempt to skip a run of spaces/tabs/CR quickly using AVX2
-size_t skip_spaces_fast(std::string_view s, size_t i) noexcept {
+#if defined(__AVX2__)
+size_t skip_spaces_avx2(std::string_view s, size_t i) noexcept {
   char const* data = s.data();
   size_t      n    = s.size();
   __m256i     sp   = _mm256_set1_epi8(' ');
@@ -50,15 +52,14 @@ size_t skip_spaces_fast(std::string_view s, size_t i) noexcept {
     }
     break;
   }
-  // Scalar tail
+
   while (i < s.size() && is_space_not_nl(static_cast<unsigned char>(s[i]))) {
     ++i;
   }
   return i;
 }
 
-// Attempt to extend a word quickly until a special char using AVX2
-size_t scan_word_fast(std::string_view s, size_t i) noexcept {
+size_t scan_word_avx2(std::string_view s, size_t i) noexcept {
   char const* data = s.data();
   size_t      n    = s.size();
   __m256i     sp   = _mm256_set1_epi8(' ');
@@ -99,15 +100,14 @@ size_t scan_word_fast(std::string_view s, size_t i) noexcept {
     }
     break;
   }
-  // Scalar tail until space/newline/operator/quote
+
   while (i < s.size()) {
     auto c = static_cast<unsigned char>(s[i]);
-    // Treat CRLF as a newline boundary: stop the word before CR
+
     if (c == '\r') {
       if (i + 1 < s.size() && s[i + 1] == '\n') {
         break;
       }
-      // Standalone CR is not a separator; keep scanning
     }
     if (c == '\n' || is_space_not_nl(c) || is_operator_char(c) || c == '\'' || c == '"' || c == '\\') {
       break;
@@ -115,6 +115,49 @@ size_t scan_word_fast(std::string_view s, size_t i) noexcept {
     ++i;
   }
   return i;
+}
+#else
+
+size_t skip_spaces_scalar(std::string_view s, size_t i) noexcept {
+  while (i < s.size() && is_space_not_nl(static_cast<unsigned char>(s[i]))) {
+    ++i;
+  }
+  return i;
+}
+
+
+size_t scan_word_scalar(std::string_view s, size_t i) noexcept {
+  while (i < s.size()) {
+    auto c = static_cast<unsigned char>(s[i]);
+    if (c == '\r') {
+      if (i + 1 < s.size() && s[i + 1] == '\n') {
+        break;
+      }
+    }
+    if (c == '\n' || is_space_not_nl(c) || is_operator_char(c) || c == '\'' || c == '"' || c == '\\') {
+      break;
+    }
+    ++i;
+  }
+  return i;
+}
+#endif // __AVX2__
+
+// Conditional wrapper functions that select fast path at compile time
+size_t skip_spaces_fast(std::string_view s, size_t i) noexcept {
+#if defined(__AVX2__)
+  return skip_spaces_avx2(s, i);
+#else
+  return skip_spaces_scalar(s, i);
+#endif
+}
+
+size_t scan_word_fast(std::string_view s, size_t i) noexcept {
+#if defined(__AVX2__)
+  return scan_word_avx2(s, i);
+#else
+  return scan_word_scalar(s, i);
+#endif
 }
 
 } // namespace

@@ -10,6 +10,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE true)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CpuOptimization)
+
 enable_testing()
 
 find_package(fmt REQUIRED)
@@ -17,8 +20,8 @@ find_package(fmt REQUIRED)
 add_library(hsh_common INTERFACE)
 target_compile_options(hsh_common INTERFACE -Wall -Wextra -Wpedantic -Werror)
 target_compile_options(hsh_common INTERFACE -fno-exceptions -fvisibility=hidden)
-target_compile_options(hsh_common INTERFACE -march=x86-64-v3)
 target_link_libraries(hsh_common INTERFACE fmt::fmt)
+apply_cpu_optimizations(hsh_common)
 
 add_subdirectory(src)
 add_subdirectory(test)
