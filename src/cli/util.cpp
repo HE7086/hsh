@@ -28,12 +28,12 @@ void export_shell_env(int argc, char** argv) noexcept {
   } else {
     shell_path = "hsh";
   }
-  setenv("SHELL", shell_path.c_str(), 1);
+  core::EnvironmentManager::instance().set("SHELL", shell_path);
 }
 
 void print_version() {
-  fmt::println("hsh shell version {}", hsh::core::VERSION);
-  fmt::println("Built: {}", hsh::core::BUILD_DATE);
+  fmt::println("hsh shell version {}", core::VERSION);
+  fmt::println("Built: {}", core::BUILD_DATE);
 }
 
 } // namespace hsh::cli

@@ -24,6 +24,7 @@ add_executable(hsh_test
   arithmetic_expansion_test.cpp
   variable_test.cpp
   command_substitution_test.cpp
+  environment_manager_test.cpp
 )
 
 add_dependencies(hsh_test hsh)

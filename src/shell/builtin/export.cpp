@@ -21,11 +21,11 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
   int status = 0;
 
   if (args.size() == 1) {
-    if (environ != nullptr) {
-      for (char** e = environ; *e != nullptr; ++e) {
-        std::string output = fmt::format("{}\n", *e);
-        write(STDOUT_FILENO, output.data(), output.size());
-      }
+    auto& env_manager = core::EnvironmentManager::instance();
+    auto  env_vars    = env_manager.list();
+    for (auto const& [name, value] : env_vars) {
+      std::string output = fmt::format("{}={}\n", name, value);
+      write(STDOUT_FILENO, output.data(), output.size());
     }
     return 0;
   }
@@ -47,14 +47,11 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
       if (auto shell_var = state.get_variable(name)) {
         existing_value = *shell_var;
       } else {
-        char const* env_val = std::getenv(name.c_str());
-        existing_value      = env_val != nullptr ? env_val : "";
+        auto env_val   = core::EnvironmentManager::instance().get(name);
+        existing_value = env_val ? *env_val : "";
       }
 
-      if (setenv(name.c_str(), existing_value.c_str(), 1) != 0) {
-        fmt::println(stderr, "export: failed to set {}", name);
-        status = 1;
-      }
+      core::EnvironmentManager::instance().set(name, existing_value);
       continue;
     }
 
@@ -69,10 +66,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
 
     state.set_variable(name, value);
 
-    if (setenv(name.c_str(), value.c_str(), 1) != 0) {
-      fmt::println(stderr, "export: failed to set {}", name);
-      status = 1;
-    }
+    core::EnvironmentManager::instance().set(name, value);
   }
 
   return status;

@@ -28,8 +28,8 @@ int cd_cmd(ShellState& state, std::span<std::string const> args) {
 
   path target;
   if (args.size() == 1) {
-    if (char const* home = std::getenv(core::HOME_DIR_VAR.data())) {
-      target = path(home);
+    if (auto home = core::EnvironmentManager::instance().get(core::HOME_DIR_VAR)) {
+      target = path(*home);
     } else {
       fmt::println(stderr, "cd: HOME not set");
       return 1;
@@ -40,8 +40,8 @@ int cd_cmd(ShellState& state, std::span<std::string const> args) {
         target             = state.last_dir_;
         std::string output = target.string() + "\n";
         write(STDOUT_FILENO, output.data(), output.size());
-      } else if (char const* oldpwd = std::getenv(core::OLDPWD_VAR.data())) {
-        target             = path(oldpwd);
+      } else if (auto oldpwd = core::EnvironmentManager::instance().get(core::OLDPWD_VAR)) {
+        target             = path(*oldpwd);
         std::string output = target.string() + "\n";
         write(STDOUT_FILENO, output.data(), output.size());
       } else {
@@ -68,8 +68,8 @@ int cd_cmd(ShellState& state, std::span<std::string const> args) {
     return 1;
   }
   state.last_dir_ = old_pwd;
-  setenv(core::OLDPWD_VAR.data(), old_pwd.string().c_str(), 1);
-  setenv(core::PWD_VAR.data(), new_pwd.string().c_str(), 1);
+  core::EnvironmentManager::instance().set(core::OLDPWD_VAR, old_pwd.string());
+  core::EnvironmentManager::instance().set(core::PWD_VAR, new_pwd.string());
 
   state.notify_directory_changed();
 

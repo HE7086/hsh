@@ -41,8 +41,8 @@ std::string expand_variables_in_arithmetic(std::string_view expr, ShellState con
     if (auto value = state.get_variable(var_name)) {
       var_value = *value;
     } else {
-      if (char const* env_val = std::getenv(var_name.c_str())) {
-        var_value = env_val;
+      if (auto env_val = core::EnvironmentManager::instance().get(var_name)) {
+        var_value = *env_val;
       } else {
         continue;
       }
@@ -71,9 +71,9 @@ std::string expand_tilde(std::string_view word) {
   if (head == "~") {
     base = core::current_user_home();
   } else if (head == "~+") {
-    base = core::getenv_str(std::string(core::PWD_VAR).c_str());
+    base = core::EnvironmentManager::instance().get(core::PWD_VAR);
   } else if (head == "~-") {
-    base = core::getenv_str(std::string(core::OLDPWD_VAR).c_str());
+    base = core::EnvironmentManager::instance().get(core::OLDPWD_VAR);
   } else if (head.size() > 1) {
     base = core::home_for_user(head.substr(1));
   }
@@ -205,8 +205,8 @@ std::string expand_variables(std::string_view word, ShellState const& state) {
     if (auto value = state.get_variable(var_name)) {
       var_value = *value;
     } else {
-      if (char const* env_val = std::getenv(var_name.c_str())) {
-        var_value = env_val;
+      if (auto env_val = core::EnvironmentManager::instance().get(var_name)) {
+        var_value = *env_val;
       }
     }
 

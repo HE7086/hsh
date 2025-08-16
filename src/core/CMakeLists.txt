@@ -8,6 +8,7 @@ target_sources(hsh_core
     string_utils.cpp
     arithmetic_utils.cpp
     locale_manager.cpp
+    environment_manager.cpp
 )
 
 target_link_libraries(hsh_core PRIVATE hsh_common)

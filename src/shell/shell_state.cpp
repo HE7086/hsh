@@ -76,8 +76,8 @@ void ShellState::update_cwd_cache() noexcept {
     cached_cwd_ = "?";
   } else {
     std::string home_dir;
-    if (char const* env_home = std::getenv(core::HOME_DIR_VAR.data()); (env_home != nullptr) && (*env_home != '\0')) {
-      home_dir = env_home;
+    if (auto env_home = core::EnvironmentManager::instance().get(core::HOME_DIR_VAR); env_home) {
+      home_dir = *env_home;
     } else if (passwd* pw = getpwuid(getuid()); pw != nullptr && pw->pw_dir != nullptr) {
       home_dir = pw->pw_dir;
     }

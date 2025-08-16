@@ -10,6 +10,8 @@ module;
 
 #include <fmt/core.h>
 
+import hsh.core;
+
 module hsh.shell;
 
 namespace hsh::shell {
@@ -18,8 +20,8 @@ namespace {
 
 std::string const& cached_user() noexcept {
   static std::string user = [] {
-    if (char const* env_user = std::getenv("USER"); env_user && *env_user) {
-      return std::string{env_user};
+    if (auto env_user = core::EnvironmentManager::instance().get("USER")) {
+      return *env_user;
     }
     if (passwd* pw = getpwuid(getuid()); pw && pw->pw_name) {
       return std::string{pw->pw_name};

@@ -2,8 +2,14 @@ module;
 
 #include <chrono>
 #include <expected>
+#include <locale>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 export module hsh.core;
 
@@ -73,6 +79,30 @@ std::expected<double, std::string> evaluate_simple_arithmetic(std::string_view e
 
 // Environment variable utilities
 std::optional<std::string> getenv_str(char const* name);
+
+// Centralized environment variable manager
+class EnvironmentManager {
+  std::mutex                                   mutex_;
+  std::unordered_map<std::string, std::string> cache_;
+
+public:
+  EnvironmentManager()  = default;
+  ~EnvironmentManager() = default;
+
+  EnvironmentManager(EnvironmentManager const&)            = delete;
+  EnvironmentManager& operator=(EnvironmentManager const&) = delete;
+
+  EnvironmentManager(EnvironmentManager&&) noexcept            = delete;
+  EnvironmentManager& operator=(EnvironmentManager&&) noexcept = delete;
+
+  [[nodiscard]] std::optional<std::string>                       get(std::string_view name);
+  void                                                           set(std::string_view name, std::string_view value);
+  void                                                           unset(std::string_view name);
+  [[nodiscard]] std::vector<std::pair<std::string, std::string>> list();
+  void                                                           clear_cache();
+
+  static EnvironmentManager& instance();
+};
 
 // User directory utilities
 std::optional<std::string> home_for_user(std::string_view user);

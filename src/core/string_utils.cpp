@@ -14,10 +14,7 @@ module hsh.core;
 namespace hsh::core {
 
 std::optional<std::string> getenv_str(char const* name) {
-  if (char const* v = std::getenv(name)) {
-    return std::string(v);
-  }
-  return std::nullopt;
+  return EnvironmentManager::instance().get(name);
 }
 
 std::optional<std::string> home_for_user(std::string_view user) {
@@ -33,7 +30,7 @@ std::optional<std::string> home_for_user(std::string_view user) {
 }
 
 std::optional<std::string> current_user_home() {
-  if (auto h = getenv_str(std::string(HOME_DIR_VAR).c_str())) {
+  if (auto h = EnvironmentManager::instance().get(HOME_DIR_VAR)) {
     return h;
   }
   if (passwd const* pw = getpwuid(getuid())) {
