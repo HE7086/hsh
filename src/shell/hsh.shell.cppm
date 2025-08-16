@@ -173,16 +173,16 @@ int echo_cmd(ShellState&, std::span<std::string const> args);
 
 void expand_alias_in_simple_command(parser::SimpleCommandAST& cmd, ShellState const& state);
 
-[[nodiscard]] std::string expand_tilde(std::string_view word);
+[[nodiscard]] std::string expand_tilde(std::string const& word);
 void                      expand_tilde_in_place(std::string& word);
 
-[[nodiscard]] std::string expand_arithmetic(std::string_view word, ShellState const& state);
+[[nodiscard]] std::string expand_arithmetic(std::string const& word, ShellState const& state);
 void                      expand_arithmetic_in_place(std::string& word, ShellState const& state);
 
-[[nodiscard]] std::string expand_variables(std::string_view word, ShellState const& state);
+[[nodiscard]] std::string expand_variables(std::string const& word, ShellState const& state);
 void                      expand_variables_in_place(std::string& word, ShellState const& state);
 
-[[nodiscard]] std::string expand_command_substitution(std::string_view word, Shell& shell);
+[[nodiscard]] std::string expand_command_substitution(std::string const& word, Shell& shell);
 void                      expand_command_substitution_in_place(std::string& word, Shell& shell);
 
 std::string build_shell_prompt(ShellState& state) noexcept;

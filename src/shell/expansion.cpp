@@ -1,16 +1,11 @@
 module;
 
-#include <cctype>
-#include <cstdlib>
 #include <expected>
 #include <optional>
 #include <regex>
 #include <string>
-#include <string_view>
 
 #include <pwd.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 import hsh.core;
 
@@ -20,8 +15,8 @@ namespace hsh::shell {
 
 namespace {
 
-std::string expand_variables_in_arithmetic(std::string_view expr, ShellState const& state) {
-  std::string result{expr};
+std::string expand_variables_in_arithmetic(std::string const& expr, ShellState const& state) {
+  std::string result = expr;
 
   size_t pos = 0;
   while (pos < result.length()) {
@@ -57,14 +52,14 @@ std::string expand_variables_in_arithmetic(std::string_view expr, ShellState con
 
 } // namespace
 
-std::string expand_tilde(std::string_view word) {
+std::string expand_tilde(std::string const& word) {
   if (word.empty() || word.front() != '~') {
-    return std::string(word);
+    return word;
   }
 
-  size_t           slash = word.find('/');
-  std::string_view head  = slash == std::string_view::npos ? word : word.substr(0, slash);
-  std::string_view tail  = slash == std::string_view::npos ? std::string_view{} : word.substr(slash + 1);
+  size_t      slash = word.find('/');
+  std::string head  = slash == std::string::npos ? word : word.substr(0, slash);
+  std::string tail  = slash == std::string::npos ? std::string{} : word.substr(slash + 1);
 
   std::optional<std::string> base;
 
@@ -75,12 +70,12 @@ std::string expand_tilde(std::string_view word) {
   } else if (head == "~-") {
     base = core::EnvironmentManager::instance().get(core::OLDPWD_VAR);
   } else if (head.size() > 1) {
-    base = core::home_for_user(std::string{head.substr(1)});
+    base = core::home_for_user(head.substr(1));
   }
 
   if (!base) {
     // No expansion available
-    return std::string(word);
+    return word;
   }
 
   if (tail.empty()) {
@@ -99,8 +94,8 @@ void expand_tilde_in_place(std::string& word) {
   }
 }
 
-std::string expand_arithmetic(std::string_view word, ShellState const& state) {
-  std::string result{word};
+std::string expand_arithmetic(std::string const& word, ShellState const& state) {
+  std::string result = word;
 
   size_t pos = 0;
   while ((pos = result.find("$((", pos)) != std::string::npos) {
@@ -160,8 +155,8 @@ void expand_arithmetic_in_place(std::string& word, ShellState const& state) {
   }
 }
 
-std::string expand_variables(std::string_view word, ShellState const& state) {
-  std::string result{word};
+std::string expand_variables(std::string const& word, ShellState const& state) {
+  std::string result = word;
 
   size_t pos = 0;
   while ((pos = result.find('$', pos)) != std::string::npos) {
@@ -225,8 +220,8 @@ void expand_variables_in_place(std::string& word, ShellState const& state) {
   }
 }
 
-std::string expand_command_substitution(std::string_view word, Shell& shell) {
-  std::string result{word};
+std::string expand_command_substitution(std::string const& word, Shell& shell) {
+  std::string result = word;
 
   size_t pos = 0;
   while (pos < result.length()) {
