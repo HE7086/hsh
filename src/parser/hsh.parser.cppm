@@ -4,6 +4,7 @@ module;
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -38,7 +39,7 @@ enum class TokenKind {
 struct Token {
   // normalized textual content (quotes removed for words)
   std::string text_;
-  TokenKind   kind_{TokenKind::Invalid};
+  TokenKind   kind_ = TokenKind::Invalid;
   // Indicates whether the very first character of this word token
   // originated from a quoted or escaped context. Used to control
   // expansions like tilde which must not occur when the leading
@@ -53,19 +54,32 @@ struct Token {
   std::string command_string_;
 
   Token() = default;
-  Token(std::string_view text, TokenKind kind)
-      : text_(text), kind_(kind) {}
-  Token(std::string_view text, TokenKind kind, bool leading_quoted)
-      : text_(text), kind_(kind), leading_quoted_(leading_quoted) {}
-  Token(std::string_view text, TokenKind kind, std::string_view variable_name)
-      : text_(text), kind_(kind), variable_name_(variable_name) {}
-  Token(std::string_view text, TokenKind kind, std::string_view variable_name, std::string_view assignment_value)
-      : text_(text), kind_(kind), variable_name_(variable_name), assignment_value_(assignment_value) {}
+  Token(std::string text, TokenKind kind)
+      : text_(std::move(text)), kind_(kind) {}
+  Token(std::string text, TokenKind kind, bool leading_quoted)
+      : text_(std::move(text)), kind_(kind), leading_quoted_(leading_quoted) {}
+  Token(std::string text, TokenKind kind, std::string variable_name)
+      : text_(std::move(text)), kind_(kind), variable_name_(std::move(variable_name)) {}
+  Token(std::string text, TokenKind kind, std::string variable_name, std::string assignment_value)
+      : text_(std::move(text))
+      , kind_(kind)
+      , variable_name_(std::move(variable_name))
+      , assignment_value_(std::move(assignment_value)) {}
+  Token(
+      std::string text,
+      TokenKind   kind,
+      std::string variable_name,
+      std::string assignment_value,
+      std::string command_string
+  )
+      : text_(std::move(text))
+      , kind_(kind)
+      , variable_name_(std::move(variable_name))
+      , assignment_value_(std::move(assignment_value))
+      , command_string_(std::move(command_string)) {}
 
-  static Token command_substitution(std::string_view text, std::string_view command_string) {
-    Token token(text, TokenKind::CommandSubst);
-    token.command_string_ = command_string;
-    return token;
+  static Token command_substitution(std::string text, std::string command_string) {
+    return Token{std::move(text), TokenKind::CommandSubst, "", "", std::move(command_string)};
   }
   Token(Token const&)                = default;
   Token& operator=(Token const&)     = default;
@@ -78,7 +92,7 @@ using Tokens = std::vector<Token>;
 
 struct LexError {
   std::string message_;
-  size_t      position_;
+  size_t      position_ = 0;
 
   explicit LexError(std::string msg, size_t pos = 0);
 
@@ -119,7 +133,7 @@ struct RedirectionAST {
   RedirectionKind kind_;
   bool            target_leading_quoted_ = false;
 
-  RedirectionAST(RedirectionKind kind, std::string_view target, bool target_leading_quoted = false, int fd = -1);
+  RedirectionAST(RedirectionKind kind, std::string target, bool target_leading_quoted = false, int fd = -1);
 
   RedirectionAST(RedirectionAST const& other)          = default;
   RedirectionAST(RedirectionAST&&) noexcept            = default;
@@ -143,7 +157,7 @@ struct SimpleCommandAST {
   SimpleCommandAST& operator=(SimpleCommandAST const&)     = delete;
   ~SimpleCommandAST()                                      = default;
 
-  void                           add_arg(std::string_view arg, bool leading_quoted = false);
+  void                           add_arg(std::string arg, bool leading_quoted = false);
   void                           add_redirection(std::unique_ptr<RedirectionAST> redir);
   [[nodiscard]] bool             empty() const noexcept;
   [[nodiscard]] std::string_view command() const noexcept;
@@ -244,7 +258,7 @@ struct ParseError {
   std::string message_;
   size_t      token_position_;
 
-  explicit ParseError(std::string_view msg, size_t pos = 0);
+  explicit ParseError(std::string msg, size_t pos = 0);
 
   [[nodiscard]] std::string const& message() const noexcept;
   [[nodiscard]] size_t             position() const noexcept;
@@ -252,6 +266,7 @@ struct ParseError {
 
 // recursive descent parser
 class Parser {
+  // tokens are owned by a local vector in parse() function.
   Tokens const* tokens_        = nullptr;
   size_t        current_token_ = 0;
 

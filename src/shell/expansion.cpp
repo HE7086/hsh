@@ -75,7 +75,7 @@ std::string expand_tilde(std::string_view word) {
   } else if (head == "~-") {
     base = core::EnvironmentManager::instance().get(core::OLDPWD_VAR);
   } else if (head.size() > 1) {
-    base = core::home_for_user(head.substr(1));
+    base = core::home_for_user(std::string{head.substr(1)});
   }
 
   if (!base) {

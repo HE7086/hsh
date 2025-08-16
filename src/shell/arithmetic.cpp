@@ -157,13 +157,12 @@ std::expected<double, std::string> ArithmeticEvaluator::parse_number(std::string
     return std::unexpected("Expected number");
   }
 
-  std::string number_str{expr.substr(0, pos)};
+  double value      = std::numeric_limits<double>::quiet_NaN();
+  auto   number_str = expr.substr(0, pos);
   expr.remove_prefix(pos);
 
-  double value   = std::numeric_limits<double>::quiet_NaN();
-  auto [ptr, ec] = std::from_chars(number_str.data(), number_str.data() + number_str.size(), value);
-
-  if (ec != std::errc{} || ptr != number_str.data() + number_str.size()) {
+  if (auto [ptr, ec] = std::from_chars(number_str.data(), number_str.data() + number_str.size(), value);
+      ec != std::errc{} || ptr != number_str.data() + number_str.size()) {
     return std::unexpected("Invalid number format");
   }
 

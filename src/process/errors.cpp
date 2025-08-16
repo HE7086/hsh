@@ -6,8 +6,8 @@ module hsh.process;
 
 namespace hsh::process {
 
-ProcessError::ProcessError(std::string_view msg, int code)
-    : message_(msg), error_code_(code) {}
+ProcessError::ProcessError(std::string msg, int code)
+    : message_(std::move(msg)), error_code_(code) {}
 
 std::string const& ProcessError::message() const noexcept {
   return message_;

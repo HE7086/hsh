@@ -11,8 +11,8 @@ module hsh.shell;
 
 namespace hsh::shell {
 
-void BuiltinRegistry::register_builtin(std::string_view name, BuiltinFunc fn) {
-  builtins_[std::string{name}] = std::move(fn);
+void BuiltinRegistry::register_builtin(std::string name, BuiltinFunc fn) {
+  builtins_[std::move(name)] = std::move(fn);
 }
 
 void register_default_builtins(BuiltinRegistry& reg) {
@@ -25,8 +25,8 @@ void register_default_builtins(BuiltinRegistry& reg) {
   reg.register_builtin("echo", builtin::echo_cmd);
 }
 
-std::optional<std::reference_wrapper<BuiltinFunc const>> BuiltinRegistry::find(std::string_view name) const {
-  auto it = builtins_.find(std::string{name});
+std::optional<std::reference_wrapper<BuiltinFunc const>> BuiltinRegistry::find(std::string const& name) const {
+  auto it = builtins_.find(name);
   if (it == builtins_.end()) {
     return std::nullopt;
   }

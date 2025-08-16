@@ -7,9 +7,9 @@ module;
 #include <optional>
 #include <span>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <utility>
 
 #include <spawn.h>
 
@@ -33,19 +33,8 @@ public:
   FileDescriptor(FileDescriptor const&)            = delete;
   FileDescriptor& operator=(FileDescriptor const&) = delete;
 
-  FileDescriptor(FileDescriptor&& other) noexcept
-      : fd_(other.fd_) {
-    other.fd_ = -1;
-  }
-
-  FileDescriptor& operator=(FileDescriptor&& other) noexcept {
-    if (this != &other) {
-      close();
-      fd_       = other.fd_;
-      other.fd_ = -1;
-    }
-    return *this;
-  }
+  FileDescriptor(FileDescriptor&& other) noexcept;
+  FileDescriptor& operator=(FileDescriptor&& other) noexcept;
 
   [[nodiscard]] constexpr int get() const noexcept {
     return fd_;
@@ -65,11 +54,7 @@ public:
     return fd;
   }
 
-  void reset(int fd = -1) noexcept {
-    close();
-    fd_ = fd;
-  }
-
+  void reset(int fd = -1) noexcept;
   void close() noexcept;
 
   static FileDescriptor open_read(char const* path) noexcept;
@@ -165,8 +150,8 @@ struct Command {
   std::optional<std::string> working_dir_;
   std::vector<Redirection>   redirections_;
 
-  explicit Command(std::span<std::string const> command_args);
-  Command(std::span<std::string const> command_args, std::string work_dir);
+  explicit Command(std::vector<std::string> command_args);
+  Command(std::vector<std::string> command_args, std::string work_dir);
 
   Command(Command&&)                 = default;
   Command& operator=(Command&&)      = default;
@@ -190,7 +175,7 @@ struct ProcessError {
   std::string message_;
   int         error_code_;
 
-  explicit ProcessError(std::string_view msg, int code = 0);
+  explicit ProcessError(std::string msg, int code = 0);
 
   ProcessError(ProcessError const&)                = default;
   ProcessError& operator=(ProcessError const&)     = default;
@@ -218,7 +203,7 @@ class Process {
   std::vector<FileDescriptor> redirection_fds_;
 
 public:
-  explicit Process(std::span<std::string const> args, std::optional<std::string> working_dir = std::nullopt);
+  explicit Process(std::vector<std::string> args, std::optional<std::string> working_dir = std::nullopt);
 
   // Non-blocking destructor: does not wait or signal the child.
   // Callers must explicitly manage lifecycle via wait()/try_wait()/terminate()/kill().

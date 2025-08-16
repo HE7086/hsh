@@ -3,7 +3,10 @@ module;
 #include <charconv>
 #include <span>
 #include <string>
-#include <fmt/core.h>
+
+#include <unistd.h>
+
+#include <fmt/format.h>
 
 module hsh.shell;
 
@@ -14,14 +17,15 @@ int exit_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() >= 2) {
     auto const* first = args[1].data();
     auto const* last  = args[1].data() + args[1].size();
-    auto [ptr, ec]    = std::from_chars(first, last, status, 10);
-    if (ec != std::errc{} || ptr != last) {
-      fmt::println(stderr, "exit: numeric argument required: {}", args[1]);
+    if (auto [ptr, ec] = std::from_chars(first, last, status, 10); ec != std::errc{} || ptr != last) {
+      std::string output = fmt::format("exit: numeric argument required: {}\n", args[1]);
+      write(STDERR_FILENO, output.data(), output.size());
       return 2;
     }
-    status = status & 0xFF;
+    status &= 0xFF;
     if (args.size() > 2) {
-      fmt::println(stderr, "exit: too many arguments");
+      std::string output = "exit: too many arguments\n";
+      write(STDERR_FILENO, output.data(), output.size());
       return 1;
     }
   }

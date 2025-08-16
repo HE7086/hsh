@@ -1,17 +1,17 @@
 module;
 
-#include <span>
 #include <string>
 #include <vector>
+#include <utility>
 
 module hsh.process;
 
 namespace hsh::process {
 
-Command::Command(std::span<std::string const> command_args)
-    : args_(command_args.begin(), command_args.end()) {}
+Command::Command(std::vector<std::string> command_args)
+    : args_(std::move(command_args)) {}
 
-Command::Command(std::span<std::string const> command_args, std::string work_dir)
-    : args_(command_args.begin(), command_args.end()), working_dir_(std::move(work_dir)) {}
+Command::Command(std::vector<std::string> command_args, std::string work_dir)
+    : args_(std::move(command_args)), working_dir_(std::move(work_dir)) {}
 
 } // namespace hsh::process

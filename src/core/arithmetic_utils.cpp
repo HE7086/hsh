@@ -3,6 +3,8 @@ module;
 #include <charconv>
 #include <expected>
 #include <limits>
+#include <string>
+#include <string_view>
 
 #include <fmt/format.h>
 
@@ -12,6 +14,7 @@ namespace hsh::core {
 
 std::expected<double, std::string> evaluate_simple_arithmetic(std::string_view expr) {
   std::string clean_expr;
+  clean_expr.reserve(expr.size());
   for (char c : expr) {
     if (c != ' ' && c != '\t') {
       clean_expr += c;
@@ -24,8 +27,7 @@ std::expected<double, std::string> evaluate_simple_arithmetic(std::string_view e
 
   // Addition and subtraction
   for (size_t i = clean_expr.length(); i > 0; --i) {
-    char c = clean_expr[i - 1];
-    if ((c == '+' || c == '-') && i > 1) {
+    if (char c = clean_expr[i - 1]; (c == '+' || c == '-') && i > 1) {
       auto left  = evaluate_simple_arithmetic(clean_expr.substr(0, i - 1));
       auto right = evaluate_simple_arithmetic(clean_expr.substr(i));
 
@@ -42,8 +44,7 @@ std::expected<double, std::string> evaluate_simple_arithmetic(std::string_view e
 
   // Multiplication, division, modulo
   for (size_t i = clean_expr.length(); i > 0; --i) {
-    char c = clean_expr[i - 1];
-    if ((c == '*' || c == '/' || c == '%') && i > 1) {
+    if (char c = clean_expr[i - 1]; (c == '*' || c == '/' || c == '%') && i > 1) {
       auto left  = evaluate_simple_arithmetic(clean_expr.substr(0, i - 1));
       auto right = evaluate_simple_arithmetic(clean_expr.substr(i));
 

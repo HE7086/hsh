@@ -12,46 +12,40 @@ module;
 module hsh.core;
 
 extern "C" {
-  extern char** environ;
+  extern char** environ; // NOLINT
 }
 
 namespace hsh::core {
 
-std::optional<std::string> EnvironmentManager::get(std::string_view name) {
+std::optional<std::string> EnvironmentManager::get(std::string const& name) {
   std::lock_guard lock(mutex_);
 
-  std::string key{name};
-  if (auto it = cache_.find(key); it != cache_.end()) {
+  if (auto it = cache_.find(name); it != cache_.end()) {
     return it->second.empty() ? std::nullopt : std::make_optional(it->second);
   }
 
-  if (char const* value = std::getenv(key.c_str())) {
-    cache_[key] = value;
+  if (char const* value = std::getenv(name.c_str())) {
+    cache_[name] = value;
     return std::string{value};
   }
 
-  cache_[key] = "";
+  cache_[name] = "";
   return std::nullopt;
 }
 
-void EnvironmentManager::set(std::string_view name, std::string_view value) {
+void EnvironmentManager::set(std::string const& name, std::string const& value) {
   std::lock_guard lock(mutex_);
 
-  std::string key{name};
-  std::string val{value};
-
-  if (setenv(key.c_str(), val.c_str(), 1) == 0) {
-    cache_[key] = val;
+  if (setenv(name.c_str(), value.c_str(), 1) == 0) {
+    cache_[name] = value;
   }
 }
 
-void EnvironmentManager::unset(std::string_view name) {
+void EnvironmentManager::unset(std::string const& name) {
   std::lock_guard lock(mutex_);
 
-  std::string key{name};
-
-  if (unsetenv(key.c_str()) == 0) {
-    cache_[key] = "";
+  if (unsetenv(name.c_str()) == 0) {
+    cache_[name] = "";
   }
 }
 
@@ -62,12 +56,9 @@ std::vector<std::pair<std::string, std::string>> EnvironmentManager::list() {
 
   if (environ != nullptr) {
     for (char** env = environ; *env != nullptr; ++env) {
-      std::string entry{*env};
-      if (auto pos = entry.find('='); pos != std::string::npos) {
-        std::string name  = entry.substr(0, pos);
-        std::string value = entry.substr(pos + 1);
-        result.emplace_back(std::move(name), std::move(value));
-
+      std::string_view entry{*env};
+      if (auto pos = entry.find('='); pos != std::string_view::npos) {
+        result.emplace_back(entry.substr(0, pos), entry.substr(pos + 1));
         cache_[result.back().first] = result.back().second;
       }
     }

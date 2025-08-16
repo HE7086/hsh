@@ -9,7 +9,7 @@ module hsh.shell;
 
 namespace hsh::shell {
 
-void expand_alias_in_simple_command(hsh::parser::SimpleCommandAST& cmd, ShellState const& state) {
+void expand_alias_in_simple_command(parser::SimpleCommandAST& cmd, ShellState const& state) {
   static constexpr size_t MAX_DEPTH = 10; // prevent infinite recursion
   for (size_t depth = 0; depth < MAX_DEPTH; ++depth) {
     if (cmd.args_.empty()) {

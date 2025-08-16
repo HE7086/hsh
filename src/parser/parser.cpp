@@ -3,6 +3,7 @@ module;
 #include <expected>
 #include <memory>
 #include <string_view>
+
 #include <fmt/format.h>
 
 module hsh.parser;
@@ -264,8 +265,8 @@ std::expected<std::unique_ptr<RedirectionAST>, ParseError> Parser::parse_redirec
     return std::unexpected(error("Expected filename after redirection"));
   }
 
-  std::string_view target         = current_token().text_;
-  bool             leading_quoted = current_token().leading_quoted_;
+  std::string target         = current_token().text_;
+  bool        leading_quoted = current_token().leading_quoted_;
   advance();
 
   return std::make_unique<RedirectionAST>(kind, target, leading_quoted);

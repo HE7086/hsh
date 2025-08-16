@@ -21,7 +21,7 @@ int set_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 2 && (args[1] == "-o" || args[1] == "+o")) {
     bool pf = state.is_pipefail();
     if (args[1] == "-o") {
-      std::string output = "pipefail\t" + std::string(pf ? "on" : "off") + "\n";
+      std::string output = fmt::format("pipefail\t{}\n", pf ? "on" : "off");
       write(STDOUT_FILENO, output.data(), output.size());
       return 0;
     }
@@ -36,11 +36,13 @@ int set_cmd(ShellState& state, std::span<std::string const> args) {
       state.set_pipefail(enable);
       return 0;
     }
-    fmt::println(stderr, "set: invalid option name: {}", args[2]);
+    std::string output = fmt::format("set: invalid option name: {}\n", args[2]);
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
 
-  fmt::println(stderr, "usage: set [-o option] | [+o option]");
+  std::string output = "usage: set [-o option] | [+o option]\n";
+  write(STDERR_FILENO, output.data(), output.size());
   return 1;
 }
 

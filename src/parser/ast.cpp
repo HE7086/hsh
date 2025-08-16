@@ -3,17 +3,18 @@ module;
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 module hsh.parser;
 
 namespace hsh::parser {
 
-RedirectionAST::RedirectionAST(RedirectionKind kind, std::string_view target, bool target_leading_quoted, int fd)
-    : target_(target), fd_(fd), kind_(kind), target_leading_quoted_(target_leading_quoted) {}
+RedirectionAST::RedirectionAST(RedirectionKind kind, std::string target, bool target_leading_quoted, int fd)
+    : target_(std::move(target)), fd_(fd), kind_(kind), target_leading_quoted_(target_leading_quoted) {}
 
-void SimpleCommandAST::add_arg(std::string_view arg, bool leading_quoted) {
-  args_.emplace_back(arg);
+void SimpleCommandAST::add_arg(std::string arg, bool leading_quoted) {
+  args_.emplace_back(std::move(arg));
   leading_quoted_args_.emplace_back(leading_quoted);
 }
 
@@ -83,8 +84,8 @@ void CompoundCommandAST::add_redirection(std::unique_ptr<RedirectionAST> redir) 
   redirections_.push_back(std::move(redir));
 }
 
-ParseError::ParseError(std::string_view msg, size_t pos)
-    : message_(msg), token_position_(pos) {}
+ParseError::ParseError(std::string msg, size_t pos)
+    : message_(std::move(msg)), token_position_(pos) {}
 
 std::string const& ParseError::message() const noexcept {
   return message_;

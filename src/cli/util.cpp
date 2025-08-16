@@ -15,7 +15,7 @@ module hsh.cli;
 namespace hsh::cli {
 
 void export_shell_env(int argc, char** argv) noexcept {
-  auto const* argv0 = (argv != nullptr) && argc > 0 ? argv[0] : "hsh";
+  auto const* argv0 = argv != nullptr && argc > 0 ? argv[0] : "hsh";
 
   std::array<char, PATH_MAX> path_buf{};
   ssize_t                    n = readlink("/proc/self/exe", path_buf.data(), path_buf.size() - 1);
@@ -23,12 +23,12 @@ void export_shell_env(int argc, char** argv) noexcept {
   if (n > 0) {
     path_buf[n] = '\0';
     shell_path  = path_buf.data();
-  } else if ((argv0 != nullptr) && argv0[0] == '/') {
+  } else if (argv0 != nullptr && argv0[0] == '/') {
     shell_path = argv0;
   } else {
     shell_path = "hsh";
   }
-  core::EnvironmentManager::instance().set("SHELL", shell_path);
+  core::EnvironmentManager::instance().set(core::SHELL_VAR, shell_path);
 }
 
 void print_version() {

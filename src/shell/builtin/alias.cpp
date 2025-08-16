@@ -8,7 +8,6 @@ module;
 
 #include <unistd.h>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 
 module hsh.shell;
@@ -28,14 +27,15 @@ int alias_cmd(ShellState& state, std::span<std::string const> args) {
   }
 
   for (size_t i = 1; i < args.size(); ++i) {
-    std::string_view spec = args[i];
-    auto             pos  = spec.find('=');
+    auto& spec = args[i];
+    auto  pos  = spec.find('=');
     if (pos == std::string::npos) {
       if (auto val = state.get_alias(spec)) {
         std::string output = fmt::format("alias {}='{}'\n", spec, *val);
         write(STDOUT_FILENO, output.data(), output.size());
       } else {
-        fmt::println(stderr, "alias: not found: {}", spec);
+        std::string output = fmt::format("alias: not found: {}\n", spec);
+        write(STDERR_FILENO, output.data(), output.size());
         status = 1;
       }
       continue;
@@ -51,7 +51,8 @@ int alias_cmd(ShellState& state, std::span<std::string const> args) {
 // unalias: remove names or -a to clear all
 int unalias_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 1) {
-    fmt::println(stderr, "unalias: usage: unalias [-a] name [name ...]");
+    std::string output = "unalias: usage: unalias [-a] name [name ...]\n";
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
   if (args.size() == 2 && args[1] == "-a") {
@@ -65,7 +66,8 @@ int unalias_cmd(ShellState& state, std::span<std::string const> args) {
   }
   for (size_t i = 1; i < args.size(); ++i) {
     if (!state.unset_alias(args[i])) {
-      fmt::println(stderr, "unalias: not found: {}", args[i]);
+      std::string output = fmt::format("unalias: not found: {}\n", args[i]);
+      write(STDERR_FILENO, output.data(), output.size());
       status = 1;
     }
   }

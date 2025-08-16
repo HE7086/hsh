@@ -28,13 +28,13 @@ struct Option {
   std::optional<std::string>              default_value_;
   std::function<bool(std::string const&)> validator_;
 
-  Option(std::string_view short_name, std::string_view long_name, std::string_view description, Type type = Type::Flag);
-  Option(std::string_view long_name, std::string_view description, Type type = Type::Flag);
+  Option(std::string short_name, std::string long_name, std::string description, Type type = Type::Flag);
+  Option(std::string long_name, std::string description, Type type = Type::Flag);
 
   Option& required(bool is_required = true);
-  Option& default_value(std::string const& value);
+  Option& default_value(std::string value);
   Option& validator(std::function<bool(std::string const&)> validate_func);
-  Option& help_text(std::string const& help);
+  Option& help_text(std::string help);
 
   [[nodiscard]] std::string const& short_name() const noexcept {
     return short_name_;
@@ -54,7 +54,7 @@ struct Option {
   [[nodiscard]] bool is_required() const noexcept {
     return required_;
   }
-  [[nodiscard]] std::optional<std::string> const& default_value() const noexcept {
+  [[nodiscard]] std::optional<std::string> default_value() const noexcept {
     return default_value_;
   }
 };
@@ -65,7 +65,7 @@ struct ParseResult {
   std::unordered_map<std::string, std::vector<std::string>> option_values_;
   std::vector<std::string>                                  positional_args_;
 
-  explicit ParseResult(bool success, std::string error_message = {});
+  explicit ParseResult(bool success, std::string error_message = "");
 
   bool is_success() const noexcept {
     return success_;
@@ -73,18 +73,18 @@ struct ParseResult {
   bool has_error() const noexcept {
     return !success_;
   }
-  std::string const& error_message() const noexcept {
+  std::string_view error_message() const noexcept {
     return error_message_;
   }
 
   // Check if an option was provided
-  bool has(std::string_view option_name) const;
+  bool has(std::string const& option_name) const;
 
   // Get single value for an option
-  std::optional<std::string> get(std::string_view option_name) const;
+  std::optional<std::string> get(std::string const& option_name) const;
 
   // Get all values for an option (for MultiValue options)
-  std::vector<std::string> get_all(std::string_view option_name) const;
+  std::vector<std::string> get_all(std::string const& option_name) const;
 
   // Get positional arguments
   std::vector<std::string> const& positional_args() const noexcept {
@@ -101,15 +101,15 @@ class ArgumentParser {
   bool                                    require_subcommand_    = false;
 
 public:
-  explicit ArgumentParser(std::string_view program_name, std::string_view description = {});
+  explicit ArgumentParser(std::string program_name, std::string description = "");
 
   Option& add_option(
-      std::string_view short_name,
-      std::string_view long_name,
-      std::string_view description,
-      Option::Type     type = Option::Type::Flag
+      std::string  short_name,
+      std::string  long_name,
+      std::string  description,
+      Option::Type type = Option::Type::Flag
   );
-  Option& add_option(std::string_view long_name, std::string_view description, Option::Type type = Option::Type::Flag);
+  Option& add_option(std::string long_name, std::string description, Option::Type type = Option::Type::Flag);
 
   // Configure global parser settings
   ArgumentParser& allow_positional_args(bool allow = true);
@@ -124,17 +124,17 @@ public:
   std::string generate_usage() const;
 
 private:
-  std::optional<size_t> find_option(std::string_view name) const;
-  static bool           is_short_option(std::string_view arg) noexcept;
-  static bool           is_long_option(std::string_view arg) noexcept;
-  static std::string    extract_option_name(std::string_view arg);
-  static ParseResult    create_error(std::string const& message);
+  std::optional<size_t> find_option(std::string const& name) const;
+  static bool           is_short_option(std::string const& arg) noexcept;
+  static bool           is_long_option(std::string const& arg) noexcept;
+  static std::string    extract_option_name(std::string const& arg);
+  static ParseResult    create_error(std::string message);
 };
 
 namespace patterns {
 
 // Create a parser with common shell options
-ArgumentParser create_shell_parser(std::string_view program_name);
+ArgumentParser create_shell_parser(std::string program_name);
 
 // Add standard options like --help, --version
 void add_standard_options(ArgumentParser& parser);

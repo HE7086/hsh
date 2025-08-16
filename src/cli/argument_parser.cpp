@@ -10,6 +10,7 @@ module;
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -20,19 +21,22 @@ module hsh.cli;
 
 namespace hsh::cli {
 
-Option::Option(std::string_view short_name, std::string_view long_name, std::string_view description, Type type)
-    : short_name_(short_name), long_name_(long_name), description_(description), type_(type) {}
+Option::Option(std::string short_name, std::string long_name, std::string description, Type type)
+    : short_name_(std::move(short_name))
+    , long_name_(std::move(long_name))
+    , description_(std::move(description))
+    , type_(type) {}
 
-Option::Option(std::string_view long_name, std::string_view description, Type type)
-    : long_name_(long_name), description_(description), type_(type) {}
+Option::Option(std::string long_name, std::string description, Type type)
+    : long_name_(std::move(long_name)), description_(std::move(description)), type_(type) {}
 
 Option& Option::required(bool is_required) {
   required_ = is_required;
   return *this;
 }
 
-Option& Option::default_value(std::string const& value) {
-  default_value_ = value;
+Option& Option::default_value(std::string value) {
+  default_value_ = std::move(value);
   return *this;
 }
 
@@ -41,53 +45,50 @@ Option& Option::validator(std::function<bool(std::string const&)> validate_func)
   return *this;
 }
 
-Option& Option::help_text(std::string const& help) {
-  help_text_ = help;
+Option& Option::help_text(std::string help) {
+  help_text_ = std::move(help);
   return *this;
 }
 
 ParseResult::ParseResult(bool success, std::string error_message)
     : success_(success), error_message_(std::move(error_message)) {}
 
-bool ParseResult::has(std::string_view option_name) const {
-  auto it = option_values_.find(std::string(option_name));
+bool ParseResult::has(std::string const& option_name) const {
+  auto it = option_values_.find(option_name);
   return it != option_values_.end() && !it->second.empty();
 }
 
-std::optional<std::string> ParseResult::get(std::string_view option_name) const {
-  if (auto it = option_values_.find(std::string(option_name)); it != option_values_.end() && !it->second.empty()) {
+std::optional<std::string> ParseResult::get(std::string const& option_name) const {
+  if (auto it = option_values_.find(option_name); it != option_values_.end() && !it->second.empty()) {
     return it->second[0];
   }
   return std::nullopt;
 }
 
-std::vector<std::string> ParseResult::get_all(std::string_view option_name) const {
-  if (auto it = option_values_.find(std::string(option_name)); it != option_values_.end()) {
+std::vector<std::string> ParseResult::get_all(std::string const& option_name) const {
+  if (auto it = option_values_.find(option_name); it != option_values_.end()) {
     return it->second;
   }
   return {};
 }
 
-ArgumentParser::ArgumentParser(std::string_view program_name, std::string_view description)
-    : program_name_(program_name), description_(description) {}
+ArgumentParser::ArgumentParser(std::string program_name, std::string description)
+    : program_name_(std::move(program_name)), description_(std::move(description)) {}
 
-Option& ArgumentParser::
-    add_option(std::string_view short_name, std::string_view long_name, std::string_view description, Option::Type type) {
-  size_t const INDEX = options_.size();
-  options_.emplace_back(short_name, long_name, description, type);
-
+Option&
+ArgumentParser::add_option(std::string short_name, std::string long_name, std::string description, Option::Type type) {
   if (!short_name.empty()) {
-    option_map_[std::string(short_name)] = INDEX;
+    option_map_[short_name] = options_.size();
   }
   if (!long_name.empty()) {
-    option_map_[std::string(long_name)] = INDEX;
+    option_map_[long_name] = options_.size();
   }
 
-  return options_.back();
+  return options_.emplace_back(std::move(short_name), std::move(long_name), std::move(description), type);
 }
 
-Option& ArgumentParser::add_option(std::string_view long_name, std::string_view description, Option::Type type) {
-  return add_option("", long_name, description, type);
+Option& ArgumentParser::add_option(std::string long_name, std::string description, Option::Type type) {
+  return add_option("", std::move(long_name), std::move(description), type);
 }
 
 ArgumentParser& ArgumentParser::allow_positional_args(bool allow) {
@@ -282,20 +283,20 @@ std::string ArgumentParser::generate_usage() const {
   return oss.str();
 }
 
-std::optional<size_t> ArgumentParser::find_option(std::string_view name) const {
+std::optional<size_t> ArgumentParser::find_option(std::string const& name) const {
   auto it = option_map_.find(std::string(name));
   return it != option_map_.end() ? std::optional{it->second} : std::nullopt;
 }
 
-bool ArgumentParser::is_short_option(std::string_view arg) noexcept {
+bool ArgumentParser::is_short_option(std::string const& arg) noexcept {
   return arg.length() >= 2 && arg[0] == '-' && arg[1] != '-' && core::LocaleManager::is_alpha(arg[1]);
 }
 
-bool ArgumentParser::is_long_option(std::string_view arg) noexcept {
+bool ArgumentParser::is_long_option(std::string const& arg) noexcept {
   return arg.length() >= 3 && arg[0] == '-' && arg[1] == '-' && core::LocaleManager::is_alpha(arg[2]);
 }
 
-std::string ArgumentParser::extract_option_name(std::string_view arg) {
+std::string ArgumentParser::extract_option_name(std::string const& arg) {
   if (is_long_option(arg)) {
     return std::string(arg.substr(2));
   }
@@ -305,14 +306,14 @@ std::string ArgumentParser::extract_option_name(std::string_view arg) {
   return std::string(arg);
 }
 
-ParseResult ArgumentParser::create_error(std::string const& message) {
-  return ParseResult{false, message};
+ParseResult ArgumentParser::create_error(std::string message) {
+  return ParseResult{false, std::move(message)};
 }
 
 namespace patterns {
 
-ArgumentParser create_shell_parser(std::string_view program_name) {
-  ArgumentParser parser(program_name, "A high-performance POSIX shell implementation");
+ArgumentParser create_shell_parser(std::string program_name) {
+  ArgumentParser parser(std::move(program_name), "A high-performance POSIX shell implementation");
 
   parser.add_option("c", "command", "Execute the given command and exit", Option::Type::Value)
       .help_text(

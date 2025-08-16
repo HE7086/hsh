@@ -2,6 +2,7 @@ module;
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <utility>
 
 module hsh.parser;

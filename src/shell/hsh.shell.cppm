@@ -37,15 +37,15 @@ struct ShellState {
 
   // alias
   void                                     set_alias(std::string name, std::string value);
-  bool                                     unset_alias(std::string_view name);
+  bool                                     unset_alias(std::string const& name);
   void                                     clear_aliases();
-  [[nodiscard]] std::optional<std::string> get_alias(std::string_view name) const;
+  [[nodiscard]] std::optional<std::string> get_alias(std::string const& name) const;
 
   // variable
   void                                     set_variable(std::string name, std::string value);
-  bool                                     unset_variable(std::string_view name);
+  bool                                     unset_variable(std::string const& name);
   void                                     clear_variables();
-  [[nodiscard]] std::optional<std::string> get_variable(std::string_view name) const;
+  [[nodiscard]] std::optional<std::string> get_variable(std::string const& name) const;
 
   // cwd
   void                      invalidate_cwd_cache() noexcept;
@@ -58,8 +58,8 @@ using BuiltinFunc = std::function<int(ShellState&, std::span<std::string const> 
 
 class BuiltinRegistry {
 public:
-  void                                                     register_builtin(std::string_view name, BuiltinFunc fn);
-  std::optional<std::reference_wrapper<BuiltinFunc const>> find(std::string_view name) const;
+  void register_builtin(std::string name, BuiltinFunc fn);
+  [[nodiscard]] std::optional<std::reference_wrapper<BuiltinFunc const>> find(std::string const& name) const;
 
 private:
   std::unordered_map<std::string, BuiltinFunc> builtins_;
@@ -77,13 +77,13 @@ public:
   ArithmeticEvaluator(ArithmeticEvaluator&&)                 = default;
   ArithmeticEvaluator& operator=(ArithmeticEvaluator&&)      = default;
 
-  std::expected<double, std::string> evaluate(std::string_view expr);
+  static std::expected<double, std::string> evaluate(std::string_view expr);
 
 private:
-  std::expected<double, std::string> parse_expression(std::string_view& expr);
-  std::expected<double, std::string> parse_term(std::string_view& expr);
-  std::expected<double, std::string> parse_factor(std::string_view& expr);
-  std::expected<double, std::string> parse_number(std::string_view& expr);
+  static std::expected<double, std::string> parse_expression(std::string_view& expr);
+  static std::expected<double, std::string> parse_term(std::string_view& expr);
+  static std::expected<double, std::string> parse_factor(std::string_view& expr);
+  static std::expected<double, std::string> parse_number(std::string_view& expr);
 
   static void skip_whitespace(std::string_view& expr);
   static bool is_digit(char c);
@@ -95,7 +95,7 @@ struct ExecutionContext {
 
   ExecutionContext() = default;
 
-  ExecutionContext(bool verbose, bool background = false)
+  explicit ExecutionContext(bool verbose, bool background = false)
       : verbose_(verbose), background_(background) {}
 
   ExecutionContext(ExecutionContext const&)                = default;
@@ -120,6 +120,10 @@ struct ExecutionResult {
 };
 
 class Shell {
+  ShellState                                shell_state_;
+  std::unique_ptr<process::CommandExecutor> executor_;
+  std::unique_ptr<BuiltinRegistry>          builtins_;
+
 public:
   Shell();
   ~Shell() = default;
@@ -129,36 +133,30 @@ public:
   Shell(Shell&&)                 = default;
   Shell& operator=(Shell&&)      = default;
 
-  ExecutionResult execute_command_string(std::string_view input, ExecutionContext const& context = {});
+  ExecutionResult execute_command_string(std::string command, ExecutionContext const& context = {});
 
-  std::expected<std::string, std::string> execute_and_capture_output(std::string_view input);
+  std::expected<std::string, std::string> execute_and_capture_output(std::string input);
 
   [[nodiscard]] bool should_exit() const;
   [[nodiscard]] int  get_exit_status() const;
 
-  [[nodiscard]] std::string build_prompt() const;
+  [[nodiscard]] std::string build_prompt();
 
-  std::expected<double, std::string> evaluate_arithmetic(std::string_view expr);
+  static std::expected<double, std::string> evaluate_arithmetic(std::string_view expr);
 
   ShellState& get_shell_state() {
     return shell_state_;
   }
-  ShellState const& get_shell_state() const {
+  [[nodiscard]] ShellState const& get_shell_state() const {
     return shell_state_;
   }
 
   BuiltinRegistry& get_builtin_registry() {
     return *builtins_;
   }
-  BuiltinRegistry const& get_builtin_registry() const {
+  [[nodiscard]] BuiltinRegistry const& get_builtin_registry() const {
     return *builtins_;
   }
-
-private:
-  ShellState                                     shell_state_;
-  std::unique_ptr<hsh::process::CommandExecutor> executor_;
-  std::unique_ptr<BuiltinRegistry>               builtins_;
-  ArithmeticEvaluator                            arithmetic_evaluator_;
 };
 
 namespace builtin {
@@ -173,7 +171,7 @@ int echo_cmd(ShellState&, std::span<std::string const> args);
 
 } // namespace builtin
 
-void expand_alias_in_simple_command(hsh::parser::SimpleCommandAST& cmd, ShellState const& state);
+void expand_alias_in_simple_command(parser::SimpleCommandAST& cmd, ShellState const& state);
 
 [[nodiscard]] std::string expand_tilde(std::string_view word);
 void                      expand_tilde_in_place(std::string& word);

@@ -16,7 +16,7 @@ export module hsh.core;
 export namespace hsh::core {
 
 // Version information
-constexpr std::string VERSION    = "0.0.1-dev";
+constexpr std::string VERSION = "0.0.1-dev";
 // constexpr std::string BUILD_DATE = __DATE__;
 
 // Shell behavior constants

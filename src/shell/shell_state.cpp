@@ -42,16 +42,16 @@ void ShellState::set_alias(std::string name, std::string value) {
   aliases_[std::move(name)] = std::move(value);
 }
 
-bool ShellState::unset_alias(std::string_view name) {
-  return aliases_.erase(std::string(name)) > 0;
+bool ShellState::unset_alias(std::string const& name) {
+  return aliases_.erase(name) > 0;
 }
 
 void ShellState::clear_aliases() {
   aliases_.clear();
 }
 
-std::optional<std::string> ShellState::get_alias(std::string_view name) const {
-  if (auto it = aliases_.find(std::string(name)); it != aliases_.end()) {
+std::optional<std::string> ShellState::get_alias(std::string const& name) const {
+  if (auto it = aliases_.find(name); it != aliases_.end()) {
     return it->second;
   }
   return std::nullopt;
@@ -103,16 +103,16 @@ void ShellState::set_variable(std::string name, std::string value) {
   variables_[std::move(name)] = std::move(value);
 }
 
-bool ShellState::unset_variable(std::string_view name) {
-  return variables_.erase(std::string(name)) > 0;
+bool ShellState::unset_variable(std::string const& name) {
+  return variables_.erase(name) > 0;
 }
 
 void ShellState::clear_variables() {
   variables_.clear();
 }
 
-std::optional<std::string> ShellState::get_variable(std::string_view name) const {
-  if (auto it = variables_.find(std::string(name)); it != variables_.end()) {
+std::optional<std::string> ShellState::get_variable(std::string const& name) const {
+  if (auto it = variables_.find(name); it != variables_.end()) {
     return it->second;
   }
   return std::nullopt;

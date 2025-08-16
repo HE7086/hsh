@@ -6,8 +6,10 @@ module;
 #include <span>
 #include <string>
 #include <system_error>
-#include <fmt/core.h>
+
 #include <unistd.h>
+
+#include <fmt/format.h>
 
 import hsh.core;
 
@@ -15,56 +17,60 @@ module hsh.shell;
 
 namespace hsh::shell::builtin {
 
-int cd_cmd(ShellState& state, std::span<std::string const> args) {
-  using std::filesystem::current_path;
-  using std::filesystem::path;
+namespace fs = std::filesystem;
 
+int cd_cmd(ShellState& state, std::span<std::string const> args) {
   std::error_code ec;
-  path            old_pwd = current_path(ec);
+  fs::path        old_pwd = fs::current_path(ec);
   if (ec) {
-    fmt::println(stderr, "cd: current_path: {}", ec.message());
+    std::string output = fmt::format("cd: current_path: {}\n", ec.message());
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
 
-  path target;
+  fs::path target;
   if (args.size() == 1) {
     if (auto home = core::EnvironmentManager::instance().get(core::HOME_DIR_VAR)) {
-      target = path(*home);
+      target = fs::path(*home);
     } else {
-      fmt::println(stderr, "cd: HOME not set");
+      std::string output = "cd: HOME not set\n";
+      write(STDERR_FILENO, output.data(), output.size());
       return 1;
     }
   } else if (args.size() == 2) {
     if (args[1] == "-") {
       if (!state.last_dir_.empty()) {
         target             = state.last_dir_;
-        std::string output = target.string() + "\n";
+        std::string output = fmt::format("{}\n", target.string());
         write(STDOUT_FILENO, output.data(), output.size());
       } else if (auto oldpwd = core::EnvironmentManager::instance().get(core::OLDPWD_VAR)) {
-        target             = path(*oldpwd);
-        std::string output = target.string() + "\n";
+        std::string output = fmt::format("{}\n", oldpwd.value());
         write(STDOUT_FILENO, output.data(), output.size());
       } else {
-        fmt::println(stderr, "cd: OLDPWD not set");
+        std::string output = "cd: OLDPWD not set\n";
+        write(STDERR_FILENO, output.data(), output.size());
         return 1;
       }
     } else {
-      target = path(args[1]);
+      target = fs::path(args[1]);
     }
   } else {
-    fmt::println(stderr, "cd: too many arguments");
+    std::string output = "cd: too many arguments\n";
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
 
   current_path(target, ec);
   if (ec) {
-    fmt::println(stderr, "cd: {}", ec.message());
+    std::string output = fmt::format("cd: {}\n", ec.message());
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
 
-  path new_pwd = current_path(ec);
+  fs::path new_pwd = fs::current_path(ec);
   if (ec) {
-    fmt::println(stderr, "cd: current_path: {}", ec.message());
+    std::string output = fmt::format("cd: current_path: {}\n", ec.message());
+    write(STDERR_FILENO, output.data(), output.size());
     return 1;
   }
   state.last_dir_ = old_pwd;

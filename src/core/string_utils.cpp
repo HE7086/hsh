@@ -17,11 +17,11 @@ std::optional<std::string> getenv_str(char const* name) {
   return EnvironmentManager::instance().get(name);
 }
 
-std::optional<std::string> home_for_user(std::string_view user) {
+std::optional<std::string> home_for_user(std::string const& user) {
   if (user.empty()) {
     return std::nullopt;
   }
-  if (passwd const* pw = getpwnam(std::string{user}.c_str())) {
+  if (passwd const* pw = getpwnam(user.c_str())) {
     if (pw->pw_dir != nullptr) {
       return std::string(pw->pw_dir);
     }
@@ -45,7 +45,7 @@ bool is_valid_identifier(std::string_view name) {
   if (name.empty()) {
     return false;
   }
-  if (auto first = static_cast<unsigned char>(name.front()); !LocaleManager::is_alpha_u(static_cast<char>(first))) {
+  if (!LocaleManager::is_alpha_u(name.front())) {
     return false;
   }
   for (size_t i = 1; i < name.size(); ++i) {

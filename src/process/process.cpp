@@ -8,6 +8,7 @@ module;
 #include <optional>
 #include <span>
 #include <vector>
+#include <utility>
 
 #include <fcntl.h>
 #include <spawn.h>
@@ -23,11 +24,11 @@ module hsh.process;
 namespace hsh::process {
 
 extern "C" {
-  extern char** environ;
+  extern char** environ; // NOLINT
 }
 
-Process::Process(std::span<std::string const> args, std::optional<std::string> working_dir)
-    : args_(args.begin(), args.end()), working_dir_(std::move(working_dir)) {}
+Process::Process(std::vector<std::string> args, std::optional<std::string> working_dir)
+    : args_(std::move(args)), working_dir_(std::move(working_dir)) {}
 
 Process::~Process() {
   cleanup();
@@ -77,7 +78,7 @@ bool Process::start() {
   }
 
   if (args_.empty() || args_[0].empty()) {
-    fmt::println(stderr, "{}", core::ERROR_EMPTY_ARGV);
+    fmt::println(stderr, "Process::start() error: empty argv");
     return false;
   }
 
@@ -87,7 +88,7 @@ bool Process::start() {
 
   auto argv = create_argv();
   if (argv.empty()) {
-    fmt::println(stderr, "{}", core::ERROR_FAILED_CREATE_ARGV);
+    fmt::println(stderr, "Process::start() error: failed to create argv");
     return false;
   }
 
@@ -153,7 +154,7 @@ std::optional<ProcessResult> Process::wait() {
   int status = 0;
 
   if (waitpid(pid_, &status, 0) == -1) {
-    fmt::println(stderr, "{}: {}", core::ERROR_WAITPID_FAILED, strerror(errno));
+    fmt::println(stderr, "waitpid() failed: {}", strerror(errno));
     return std::nullopt;
   }
 
@@ -179,7 +180,7 @@ std::optional<ProcessResult> Process::try_wait() {
   }
 
   if (result == -1) {
-    fmt::println(stderr, "{}: {}", core::ERROR_WAITPID_FAILED, strerror(errno));
+    fmt::println(stderr, "waitpid() failed: {}", strerror(errno));
     return std::nullopt;
   }
 
@@ -192,7 +193,7 @@ bool Process::terminate() const {
   }
 
   if (::kill(pid_, SIGTERM) == -1) {
-    fmt::println(stderr, "{}: {}", core::ERROR_KILL_SIGTERM_FAILED, strerror(errno));
+    fmt::println(stderr, "kill(SIGTERM) failed: {}", strerror(errno));
     return false;
   }
 
@@ -205,7 +206,7 @@ bool Process::kill() const {
   }
 
   if (::kill(pid_, SIGKILL) == -1) {
-    fmt::println(stderr, "{}: {}", core::ERROR_KILL_SIGKILL_FAILED, strerror(errno));
+    fmt::println(stderr, "kill(SIGKILL) failed: {}", strerror(errno));
     return false;
   }
 
