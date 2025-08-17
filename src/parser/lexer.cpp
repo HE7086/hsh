@@ -6,7 +6,7 @@ module;
 #include <string_view>
 
 #if defined(__AVX2__)
-#include <immintrin.h>
+#  include <immintrin.h>
 #endif
 
 import hsh.core;

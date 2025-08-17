@@ -28,7 +28,7 @@ JobId JobController::add_background_job(std::unique_ptr<ProcessGroup> process_gr
 }
 
 void JobController::check_background_jobs() {
-  for (auto& [job_id, job] : jobs_) {
+  for (auto& [_, job] : jobs_) {
     if (job->status_ == JobStatus::Running) {
       update_job_status(*job);
     }
@@ -38,7 +38,7 @@ void JobController::check_background_jobs() {
 std::vector<Job const*> JobController::get_active_jobs() const {
   std::vector<Job const*> active_jobs;
 
-  for (auto const& [job_id, job] : jobs_) {
+  for (auto const& [_, job] : jobs_) {
     if (job->status_ == JobStatus::Running || job->status_ == JobStatus::Stopped) {
       active_jobs.push_back(job.get());
     }

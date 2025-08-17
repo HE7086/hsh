@@ -1,6 +1,5 @@
 module;
 
-#include <cstdio>
 #include <span>
 #include <string>
 

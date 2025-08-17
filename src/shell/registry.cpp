@@ -2,9 +2,7 @@ module;
 
 #include <functional>
 #include <optional>
-#include <span>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 
 module hsh.shell;

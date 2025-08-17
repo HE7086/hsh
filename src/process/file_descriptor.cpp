@@ -2,6 +2,7 @@ module;
 
 #include <cerrno>
 #include <cstring>
+
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -40,7 +41,7 @@ void FileDescriptor::close() noexcept {
 FileDescriptor FileDescriptor::open_read(char const* path) noexcept {
   int fd = open(path, O_RDONLY | O_CLOEXEC);
   if (fd == -1) {
-    fmt::println(stderr, "hsh: {}: {}", path, strerror(errno));
+    fmt::println(stderr, "hsh: {}: {}", path, std::strerror(errno));
     return FileDescriptor{};
   }
   return FileDescriptor{fd};
@@ -49,7 +50,7 @@ FileDescriptor FileDescriptor::open_read(char const* path) noexcept {
 FileDescriptor FileDescriptor::open_write(char const* path) noexcept {
   int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
   if (fd == -1) {
-    fmt::println(stderr, "hsh: {}: {}", path, strerror(errno));
+    fmt::println(stderr, "hsh: {}: {}", path, std::strerror(errno));
     return FileDescriptor{};
   }
   return FileDescriptor{fd};
@@ -58,7 +59,7 @@ FileDescriptor FileDescriptor::open_write(char const* path) noexcept {
 FileDescriptor FileDescriptor::open_append(char const* path) noexcept {
   int fd = open(path, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
   if (fd == -1) {
-    fmt::println(stderr, "hsh: {}: {}", path, strerror(errno));
+    fmt::println(stderr, "hsh: {}: {}", path, std::strerror(errno));
     return FileDescriptor{};
   }
   return FileDescriptor{fd};

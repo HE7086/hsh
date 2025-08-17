@@ -71,28 +71,27 @@ void register_default_builtins(BuiltinRegistry&);
 struct ArithmeticValue {
   std::variant<double, long> value_;
 
-  explicit ArithmeticValue(double v) : value_(v) {}
-  explicit ArithmeticValue(long v) : value_(v) {}
-  explicit ArithmeticValue(int v) : value_(static_cast<long>(v)) {}
-  
+  explicit ArithmeticValue(double v)
+      : value_(v) {}
+  explicit ArithmeticValue(long v)
+      : value_(v) {}
+  explicit ArithmeticValue(int v)
+      : value_(static_cast<long>(v)) {}
+
   [[nodiscard]] bool is_float() const noexcept {
     return std::holds_alternative<double>(value_);
   }
-  
+
   [[nodiscard]] bool is_integer() const noexcept {
     return std::holds_alternative<long>(value_);
   }
-  
+
   [[nodiscard]] double as_float() const noexcept {
-    return std::visit([](auto const& v) -> double {
-      return static_cast<double>(v);
-    }, value_);
+    return std::visit([](auto const& v) -> double { return static_cast<double>(v); }, value_);
   }
-  
+
   [[nodiscard]] long as_integer() const noexcept {
-    return std::visit([](auto const& v) -> long {
-      return static_cast<long>(v);
-    }, value_);
+    return std::visit([](auto const& v) -> long { return static_cast<long>(v); }, value_);
   }
 };
 

@@ -1,11 +1,9 @@
 module;
 
 #include <array>
-#include <cstdlib>
 #include <string>
 
 #include <pwd.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <fmt/core.h>
@@ -53,7 +51,7 @@ std::string const& cached_host() noexcept {
 
 std::string build_shell_prompt(ShellState& state) noexcept {
   std::string cwd         = state.get_cached_cwd();
-  char        prompt_char = (getuid() == 0) ? '#' : '$';
+  char        prompt_char = getuid() == 0 ? '#' : '$';
 
   return fmt::format("[{}@{} {}]{} ", cached_user(), cached_host(), cwd, prompt_char);
 }

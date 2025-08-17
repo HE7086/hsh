@@ -1,13 +1,13 @@
 module;
 
 #include <array>
+#include <cerrno>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -20,7 +20,7 @@ namespace hsh::process {
 std::unique_ptr<Pipe> Pipe::create() {
   auto pipe = std::make_unique<Pipe>();
   if (pipe2(pipe->fds_.data(), O_CLOEXEC) == -1) {
-    fmt::println(stderr, "Failed to create pipe: {}", strerror(errno));
+    fmt::println(stderr, "Failed to create pipe: {}", std::strerror(errno));
     return nullptr;
   }
   return pipe;

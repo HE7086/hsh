@@ -1,7 +1,5 @@
 module;
 
-#include <cstdio>
-#include <cstdlib>
 #include <span>
 #include <string>
 #include <string_view>
