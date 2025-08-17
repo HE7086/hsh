@@ -26,10 +26,6 @@ int main(int argc, char* argv[]) {
   }
 
   bool verbose = args.has("verbose");
-  bool quiet   = args.has("quiet");
-  if (quiet && verbose) {
-    verbose = false;
-  }
 
   if (args.has("command")) {
     auto command = args.get("command");
@@ -40,5 +36,5 @@ int main(int argc, char* argv[]) {
     return hsh::shell::run_command(*command, verbose);
   }
 
-  return hsh::shell::run_interactive_mode(verbose, quiet);
+  return hsh::shell::run_interactive_mode(verbose);
 }

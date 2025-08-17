@@ -216,9 +216,9 @@ void                      expand_command_substitution_in_place(std::string& word
 std::string build_shell_prompt(ShellState& state) noexcept;
 
 int run_command(std::string const& command, bool verbose = false);
-int run_interactive_mode(bool verbose = false, bool quiet = false);
+int run_interactive_mode(bool verbose = false);
 
 int run_command_with_shell(std::string const& command, Shell& shell, bool verbose = false);
-int run_interactive_mode_with_shell(Shell& shell, bool verbose = false, bool quiet = false);
+int run_interactive_mode_with_shell(Shell& shell, bool verbose = false);
 
 } // namespace hsh::shell

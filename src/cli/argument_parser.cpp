@@ -327,7 +327,6 @@ void add_standard_options(ArgumentParser& parser) {
   parser.add_option("h", "help", "Show this help message and exit");
   parser.add_option("version", "Show version information and exit");
   parser.add_option("v", "verbose", "Enable verbose output");
-  parser.add_option("q", "quiet", "Suppress non-essential output");
 }
 
 } // namespace patterns

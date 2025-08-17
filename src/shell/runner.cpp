@@ -19,25 +19,21 @@ int run_command_with_shell(std::string const& command, Shell& shell, bool verbos
   return result.exit_code_;
 }
 
-int run_interactive_mode(bool verbose, bool quiet) {
+int run_interactive_mode(bool verbose) {
   Shell shell;
-  return run_interactive_mode_with_shell(shell, verbose, quiet);
+  return run_interactive_mode_with_shell(shell, verbose);
 }
 
-int run_interactive_mode_with_shell(Shell& shell, bool verbose, bool quiet) {
+int run_interactive_mode_with_shell(Shell& shell, bool verbose) {
   std::string input;
 
   while (!shell.should_exit()) {
-    if (!quiet) {
-      std::print("{}", shell.build_prompt());
-    }
+    std::print("{}", shell.build_prompt());
 
     input.clear();
     if (!std::getline(std::cin, input)) {
       if (std::cin.eof()) {
-        if (!quiet) {
-          std::println("");
-        }
+        std::println("");
         break;
       }
       std::cin.clear();
