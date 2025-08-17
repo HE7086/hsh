@@ -1,7 +1,14 @@
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
+
+#include "test_utils.h"
 
 import hsh.shell;
 import hsh.parser;
+
+using hsh::test::collect_tokens; // namespace
 
 namespace hsh::shell::test {
 
@@ -78,9 +85,7 @@ TEST_F(CommandSubstitutionTest, FailingCommandSubstitution) {
 class CommandSubstitutionLexerTest : public ::testing::Test {};
 
 TEST_F(CommandSubstitutionLexerTest, DollarParenTokenRecognition) {
-  auto result = parser::tokenize("$(echo hello)");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("$(echo hello)");
   ASSERT_GE(tokens.size(), 1);
 
   bool found_cmd_subst = false;
@@ -94,9 +99,7 @@ TEST_F(CommandSubstitutionLexerTest, DollarParenTokenRecognition) {
 }
 
 TEST_F(CommandSubstitutionLexerTest, BacktickTokenRecognition) {
-  auto result = parser::tokenize("`echo hello`");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("`echo hello`");
   ASSERT_GE(tokens.size(), 1);
 
   bool found_cmd_subst = false;
@@ -110,9 +113,7 @@ TEST_F(CommandSubstitutionLexerTest, BacktickTokenRecognition) {
 }
 
 TEST_F(CommandSubstitutionLexerTest, CommandSubstitutionInWord) {
-  auto result = parser::tokenize("prefix$(echo middle)suffix");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("prefix$(echo middle)suffix");
   ASSERT_GE(tokens.size(), 1);
 
   bool found_full_word = false;
@@ -126,9 +127,7 @@ TEST_F(CommandSubstitutionLexerTest, CommandSubstitutionInWord) {
 }
 
 TEST_F(CommandSubstitutionLexerTest, NestedParentheses) {
-  auto result = parser::tokenize("$(echo (test))");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("$(echo (test))");
   ASSERT_GE(tokens.size(), 1);
 
   bool found_cmd_subst = false;
@@ -142,9 +141,7 @@ TEST_F(CommandSubstitutionLexerTest, NestedParentheses) {
 }
 
 TEST_F(CommandSubstitutionLexerTest, MixedQuotingAndSubstitution) {
-  auto result = parser::tokenize("\"$(echo test)\"");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("\"$(echo test)\"");
   ASSERT_GE(tokens.size(), 1);
 
   bool found_quoted_subst = false;

@@ -2,6 +2,7 @@ module;
 
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -162,41 +163,73 @@ size_t scan_word_fast(std::string_view s, size_t i) noexcept {
 
 } // namespace
 
-std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
-  Tokens out;
-  out.reserve(input.size() / 8); // reasonable starting capacity
-  size_t n = input.size();
-  size_t i = 0;
+Lexer::Lexer(std::string_view input) noexcept
+    : input_(input) {}
+
+bool Lexer::at_end() const noexcept {
+  return position_ >= input_.size();
+}
+
+size_t Lexer::position() const noexcept {
+  return position_;
+}
+
+void Lexer::reset() noexcept {
+  position_ = 0;
+}
+
+std::expected<std::optional<Token>, LexError> Lexer::next_token() {
+  auto result = tokenize_next();
+  return result;
+}
+
+std::expected<std::optional<Token>, LexError> Lexer::peek_token() {
+  size_t saved_position = position_;
+  auto   result         = tokenize_next();
+  position_             = saved_position;
+  return result;
+}
+
+std::expected<std::optional<Token>, LexError> Lexer::tokenize_next() {
+  size_t n = input_.size();
+  size_t i = position_;
+
+  if (i >= n) {
+    return std::optional<Token>{};
+  }
+
   while (i < n) {
-    auto c = static_cast<unsigned char>(input[i]);
+    auto c = static_cast<unsigned char>(input_[i]);
 
     // Skip spaces/tabs
     if (is_space_not_nl(c)) {
-      i = skip_spaces_fast(input, i);
+      i = skip_spaces_fast(input_, i);
       continue;
     }
 
     // Normalize CRLF to a single newline token
     if (c == '\r') {
-      if (i + 1 < n && input[i + 1] == '\n') {
-        out.emplace_back("\n", TokenKind::Newline);
-        i += 2;
-        continue;
+      if (i + 1 < n && input_[i + 1] == '\n') {
+        position_ = i + 2;
+        return std::optional{
+            Token{"\n", TokenKind::Newline}
+        };
       }
       // Standalone CR is not whitespace; treat it as part of a word
     }
 
     if (c == '\n') {
-      out.emplace_back("\n", TokenKind::Newline);
-      ++i;
-      continue;
+      position_ = i + 1;
+      return std::optional{
+          Token{"\n", TokenKind::Newline}
+      };
     }
 
     // Comments: '#' at start of token (unquoted)
     if (c == '#') {
       // Skip until newline or end
       size_t j = i + 1;
-      while (j < n && input[j] != '\n') {
+      while (j < n && input_[j] != '\n') {
         ++j;
       }
       i = j;
@@ -205,105 +238,114 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
 
     // Three-char operators that must be checked first
     if (i + 2 < n) {
-      auto c2 = static_cast<unsigned char>(input[i + 1]);
-      auto c3 = static_cast<unsigned char>(input[i + 2]);
+      auto c2 = static_cast<unsigned char>(input_[i + 1]);
+      auto c3 = static_cast<unsigned char>(input_[i + 2]);
       if (c == '<' && c2 == '<' && c3 == '-') {
-        out.emplace_back("<<-", TokenKind::HeredocDash);
-        i += 3;
-        continue;
+        position_ = i + 3;
+        return std::optional{
+            Token{"<<-", TokenKind::HeredocDash}
+        };
       }
     }
 
     // Two-char operators
     if (i + 1 < n) {
-      auto c2 = static_cast<unsigned char>(input[i + 1]);
+      auto c2 = static_cast<unsigned char>(input_[i + 1]);
       if (c == '|' && c2 == '|') {
-        out.emplace_back("||", TokenKind::OrIf);
-        i += 2;
-        continue;
+        position_ = i + 2;
+        return std::optional{
+            Token{"||", TokenKind::OrIf}
+        };
       }
       if (c == '&' && c2 == '&') {
-        out.emplace_back("&&", TokenKind::AndIf);
-        i += 2;
-        continue;
+        position_ = i + 2;
+        return std::optional{
+            Token{"&&", TokenKind::AndIf}
+        };
       }
       if (c == '<' && c2 == '<') {
-        out.emplace_back("<<", TokenKind::Heredoc);
-        i += 2;
-        continue;
+        position_ = i + 2;
+        return std::optional{
+            Token{"<<", TokenKind::Heredoc}
+        };
       }
       if (c == '>' && c2 == '>') {
-        out.emplace_back(">>", TokenKind::Append);
-        i += 2;
-        continue;
+        position_ = i + 2;
+        return std::optional{
+            Token{">>", TokenKind::Append}
+        };
       }
       if (c == ';' && c2 == ';') {
-        out.emplace_back(";;", TokenKind::DSemi);
-        i += 2;
-        continue;
+        position_ = i + 2;
+        return std::optional{
+            Token{";;", TokenKind::DSemi}
+        };
       }
     }
 
     // Single-char operators
     switch (c) {
       case '|':
-        out.emplace_back("|", TokenKind::Pipe);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{"|", TokenKind::Pipe}
+        };
       case '&':
-        out.emplace_back("&", TokenKind::Ampersand);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{"&", TokenKind::Ampersand}
+        };
       case ';':
-        out.emplace_back(";", TokenKind::Semi);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{";", TokenKind::Semi}
+        };
       case '(':
-        out.emplace_back("(", TokenKind::LParen);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{"(", TokenKind::LParen}
+        };
       case ')':
-        out.emplace_back(")", TokenKind::RParen);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{")", TokenKind::RParen}
+        };
       case '<':
-        out.emplace_back("<", TokenKind::RedirectIn);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{"<", TokenKind::RedirectIn}
+        };
       case '>':
-        out.emplace_back(">", TokenKind::RedirectOut);
-        ++i;
-        continue;
+        position_ = i + 1;
+        return std::optional{
+            Token{">", TokenKind::RedirectOut}
+        };
       default: break;
     }
 
-    // Word: POSIX concatenation of segments (unquoted/quoted/escaped)
+    // Word processing
     std::string accum;
     accum.reserve(16);
     bool leading_quoted = false;
     while (i < n) {
       // Fast unquoted run until special char
-      size_t j = scan_word_fast(input, i);
+      size_t j = scan_word_fast(input_, i);
       if (j > i) {
-        // If we are at the start of the word and consuming an unquoted run,
-        // then the first character is not quoted
-        // (leading_quoted remains whatever it already is)
-        accum.append(input.substr(i, j - i));
+        accum.append(input_.substr(i, j - i));
         i = j;
       }
       if (i >= n) {
         break;
       }
-      auto c1 = static_cast<unsigned char>(input[i]);
-      // Special-case: arithmetic expansion $(( ... )) should be kept within a single word
-      // Detect pattern where fast scan stopped at '(' but preceding char was '$' and next is '('
-      if (c1 == '(' && i > 0 && input[i - 1] == '$' && i + 1 < n && input[i + 1] == '(') {
-        // Scan forward to find matching "))" while accounting for nested parentheses
-        size_t k           = i + 2; // start after "(("
+      auto c1 = static_cast<unsigned char>(input_[i]);
+
+      // Special-case: arithmetic expansion $(( ... ))
+      if (c1 == '(' && i > 0 && input_[i - 1] == '$' && i + 1 < n && input_[i + 1] == '(') {
+        size_t k           = i + 2;
         int    paren_depth = 0;
         bool   found       = false;
         while (k < n) {
-          char c2 = input[k];
+          char c2 = input_[k];
           if (c2 == '(') {
             ++paren_depth;
             ++k;
@@ -311,11 +353,10 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           }
           if (c2 == ')') {
             if (paren_depth == 0) {
-              // We need a second ')' to close $((...))
-              if (k + 1 < n && input[k + 1] == ')') {
-                k += 2; // consume both ')'
+              if (k + 1 < n && input_[k + 1] == ')') {
+                k += 2;
                 found = true;
-              } // Not a complete arithmetic expansion; fall back to normal handling
+              }
               break;
             }
             --paren_depth;
@@ -325,23 +366,19 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           ++k;
         }
         if (found) {
-          // We already appended the '$' as part of the fast run; append from the first '(' to after the closing '))'
-          accum.append(input.substr(i, k - i));
+          accum.append(input_.substr(i, k - i));
           i = k;
           continue;
         }
-        // If not found, fall through to normal operator/separator handling below
       }
 
-      // Special-case: command substitution $( ... ) should be kept within a single word
-      // Detect pattern where fast scan stopped at '(' but preceding char was '$' and next is NOT '('
-      if (c1 == '(' && i > 0 && input[i - 1] == '$' && (i + 1 >= n || input[i + 1] != '(')) {
-        // Scan forward to find matching ')' while accounting for nested parentheses
-        size_t k           = i + 1; // start after "("
+      // Special-case: command substitution $( ... )
+      if (c1 == '(' && i > 0 && input_[i - 1] == '$' && (i + 1 >= n || input_[i + 1] != '(')) {
+        size_t k           = i + 1;
         int    paren_depth = 0;
         bool   found       = false;
         while (k < n) {
-          char c2 = input[k];
+          char c2 = input_[k];
           if (c2 == '(') {
             ++paren_depth;
             ++k;
@@ -349,8 +386,7 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           }
           if (c2 == ')') {
             if (paren_depth == 0) {
-              // Found matching ')' to close $(...)
-              k += 1; // consume the ')'
+              k += 1;
               found = true;
               break;
             }
@@ -361,69 +397,61 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           ++k;
         }
         if (found) {
-          // We already appended the '$' as part of the fast run; append from the first '(' to after the closing ')'
-          accum.append(input.substr(i, k - i));
+          accum.append(input_.substr(i, k - i));
           i = k;
           continue;
         }
-        // If not found, fall through to normal operator/separator handling below
       }
 
-      // Special-case: backtick command substitution `...` should be kept within a single word
+      // Special-case: backtick command substitution `...`
       if (c1 == '`') {
-        // Scan forward to find matching backtick
-        size_t k     = i + 1; // start after first backtick
+        size_t k     = i + 1;
         bool   found = false;
         while (k < n) {
-          char c2 = input[k];
+          char c2 = input_[k];
           if (c2 == '`') {
-            // Found matching backtick
-            k += 1; // consume the closing backtick
+            k += 1;
             found = true;
             break;
           }
           if (c2 == '\\' && k + 1 < n) {
-            // Handle escaped characters within backticks
-            k += 2; // skip the escaped character
+            k += 2;
             continue;
           }
           ++k;
         }
         if (found) {
-          // Append the entire backtick expression
-          accum.append(input.substr(i, k - i));
+          accum.append(input_.substr(i, k - i));
           i = k;
           continue;
         }
-        // If not found, fall through to normal handling
       }
 
       // Stop if separator or operator encountered
       if (c1 == '\n' ||
-          (c1 == '\r' && i + 1 < n && input[i + 1] == '\n') ||
+          (c1 == '\r' && i + 1 < n && input_[i + 1] == '\n') ||
           is_space_not_nl(c1) ||
           is_operator_char(c1)) {
         break;
       }
+
       if (c1 == '\\') {
         if (i + 1 < n) {
-          if (input[i + 1] == '\n') {
-            // line continuation: drop both
+          if (input_[i + 1] == '\n') {
             i += 2;
             continue;
           }
-          if (input[i + 1] == '\r' && i + 2 < n && input[i + 2] == '\n') {
-            // backslash-CRLF continuation
+          if (input_[i + 1] == '\r' && i + 2 < n && input_[i + 2] == '\n') {
             i += 3;
             continue;
           }
           if (accum.empty()) {
-            leading_quoted = true; // backslash quotes the first character
+            leading_quoted = true;
           }
-          accum.push_back(input[i + 1]);
+          accum.push_back(input_[i + 1]);
           i += 2;
           continue;
-        } // trailing backslash: keep as literal
+        }
         if (accum.empty()) {
           leading_quoted = true;
         }
@@ -431,34 +459,34 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
         ++i;
         continue;
       }
+
       if (c1 == '\'') {
-        // single-quoted segment: literal until next '\''
         if (accum.empty()) {
           leading_quoted = true;
         }
-        size_t quote_start = i; // for error reporting
-        ++i;                    // skip opening quote
-        while (i < n && input[i] != '\'') {
-          accum.push_back(input[i]);
+        size_t quote_start = i;
+        ++i;
+        while (i < n && input_[i] != '\'') {
+          accum.push_back(input_[i]);
           ++i;
         }
-        if (i < n && input[i] == '\'') {
-          ++i; // consume closing if present
+        if (i < n && input_[i] == '\'') {
+          ++i;
         } else {
           return std::unexpected(LexError("Unterminated single quote", quote_start));
         }
         continue;
       }
+
       if (c1 == '"') {
-        // double-quoted segment with limited escapes
         if (accum.empty()) {
           leading_quoted = true;
         }
-        size_t quote_start = i; // for error reporting
-        ++i;                    // skip opening quote
+        size_t quote_start = i;
+        ++i;
         bool closed = false;
         while (i < n) {
-          char d = input[i];
+          char d = input_[i];
           if (d == '"') {
             ++i;
             closed = true;
@@ -466,13 +494,12 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           }
           if (d == '\\') {
             if (i + 1 < n) {
-              char e = input[i + 1];
+              char e = input_[i + 1];
               if (e == '\n') {
                 i += 2;
                 continue;
-              } // continuation
-              if (e == '\r' && i + 2 < n && input[i + 2] == '\n') {
-                // backslash-CRLF continuation inside double quotes
+              }
+              if (e == '\r' && i + 2 < n && input_[i + 2] == '\n') {
                 i += 3;
                 continue;
               }
@@ -481,11 +508,10 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
                 i += 2;
                 continue;
               }
-              // backslash not special: keep backslash literally
               accum.push_back('\\');
               ++i;
               continue;
-            } // trailing backslash inside quotes: keep it
+            }
             accum.push_back('\\');
             ++i;
             continue;
@@ -498,7 +524,7 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
         }
         continue;
       }
-      // Fallback: shouldn't happen due to fast scan, but guard anyway
+
       if (c1 != '\n' && !is_space_not_nl(c1) && !is_operator_char(c1)) {
         accum.push_back(static_cast<char>(c1));
         ++i;
@@ -506,12 +532,14 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
       }
       break;
     }
+
     if (!accum.empty()) {
+      position_ = i;
+
       // Check for variable assignment (VAR=value)
       if (!leading_quoted) {
         size_t eq_pos = accum.find('=');
         if (eq_pos != std::string::npos && eq_pos > 0) {
-          // Validate variable name (must start with letter/underscore, contain only alnum/_)
           std::string var_name   = accum.substr(0, eq_pos);
           bool        valid_name = true;
           if (!core::LocaleManager::is_alpha_u(var_name[0])) {
@@ -526,8 +554,9 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
           }
           if (valid_name) {
             std::string var_value = accum.substr(eq_pos + 1);
-            out.emplace_back(std::move(accum), TokenKind::Assignment, var_name, var_value);
-            continue;
+            return std::optional{
+                Token{std::move(accum), TokenKind::Assignment, var_name, var_value}
+            };
           }
         }
       }
@@ -535,11 +564,9 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
       // Check for variable expansion ($VAR or ${VAR})
       if (!leading_quoted && accum.size() > 1 && accum[0] == '$') {
         if (accum[1] == '{') {
-          // ${VAR} format
           if (accum.size() > 3 && accum.back() == '}') {
-            std::string var_name = accum.substr(2, accum.size() - 3);
-            // Validate variable name
-            bool valid_name = true;
+            std::string var_name   = accum.substr(2, accum.size() - 3);
+            bool        valid_name = true;
             if (!var_name.empty()) {
               if (!core::LocaleManager::is_alpha_u(var_name[0])) {
                 valid_name = false;
@@ -555,12 +582,12 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
               valid_name = false;
             }
             if (valid_name) {
-              out.emplace_back(std::move(accum), TokenKind::Variable, var_name);
-              continue;
+              return std::optional{
+                  Token{std::move(accum), TokenKind::Variable, var_name}
+              };
             }
           }
         } else {
-          // $VAR format - extract valid variable name
           size_t k = 1;
           if (k < accum.size() && core::LocaleManager::is_alpha_u(accum[k])) {
             std::string var_name;
@@ -571,42 +598,41 @@ std::expected<Tokens, LexError> tokenize(std::string_view input) { // NOLINT
               ++k;
             }
             if (k == accum.size()) {
-              // Entire word is $VAR
-              out.emplace_back(std::move(accum), TokenKind::Variable, var_name);
-              continue;
+              return std::optional{
+                  Token{std::move(accum), TokenKind::Variable, var_name}
+              };
             }
           }
         }
       }
 
-      // Check for command substitution ($(command) or `command`)
-      // But make sure it's not arithmetic expansion $((expr))
+      // Check for command substitution
       if (!leading_quoted) {
-        // $(command) format - but exclude arithmetic expansion $((expr))
         if (accum.size() >= 4 &&
             accum.starts_with("$(") &&
             accum.back() == ')' &&
             (accum.size() < 5 || !accum.starts_with("$((") || accum.substr(accum.size() - 2) != "))")) {
           std::string command_string = accum.substr(2, accum.size() - 3);
-          out.emplace_back(Token::command_substitution(std::move(accum), command_string));
-          continue;
+          return std::optional{Token::command_substitution(std::move(accum), command_string)};
         }
-        // `command` format
         if (accum.size() >= 3 && accum.front() == '`' && accum.back() == '`') {
           std::string command_string = accum.substr(1, accum.size() - 2);
-          out.emplace_back(Token::command_substitution(std::move(accum), command_string));
-          continue;
+          return std::optional{Token::command_substitution(std::move(accum), command_string)};
         }
       }
 
       // Default to Word token
-      out.emplace_back(std::move(accum), TokenKind::Word, leading_quoted);
-      continue;
+      return std::optional{
+          Token{std::move(accum), TokenKind::Word, leading_quoted}
+      };
     }
-    // If we reach here, it's an unexpected character; advance to avoid infinite loop
+
     ++i;
   }
-  return out;
+
+  position_ = i;
+  return std::optional<Token>{};
 }
+
 
 } // namespace hsh::parser

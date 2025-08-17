@@ -1,7 +1,14 @@
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
+
+#include "test_utils.h"
 
 import hsh.shell;
 import hsh.parser;
+
+using hsh::test::collect_tokens; // namespace
 
 namespace hsh::shell::test {
 
@@ -159,27 +166,21 @@ TEST_F(VariableTest, VariableWithSpaces) {
 class VariableLexerTest : public ::testing::Test {};
 
 TEST_F(VariableLexerTest, VariableTokenRecognition) {
-  auto result = parser::tokenize("$VAR");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("$VAR");
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].kind_, hsh::parser::TokenKind::Variable);
   EXPECT_EQ(tokens[0].variable_name_, "VAR");
 }
 
 TEST_F(VariableLexerTest, BracedVariableTokenRecognition) {
-  auto result = parser::tokenize("${VAR}");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("${VAR}");
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].kind_, hsh::parser::TokenKind::Variable);
   EXPECT_EQ(tokens[0].variable_name_, "VAR");
 }
 
 TEST_F(VariableLexerTest, AssignmentTokenRecognition) {
-  auto result = parser::tokenize("VAR=value");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("VAR=value");
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].kind_, hsh::parser::TokenKind::Assignment);
   EXPECT_EQ(tokens[0].variable_name_, "VAR");
@@ -187,9 +188,7 @@ TEST_F(VariableLexerTest, AssignmentTokenRecognition) {
 }
 
 TEST_F(VariableLexerTest, VariableInWord) {
-  auto result = parser::tokenize("prefix$VAR suffix");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("prefix$VAR suffix");
   ASSERT_EQ(tokens.size(), 2);
   EXPECT_EQ(tokens[0].kind_, hsh::parser::TokenKind::Word);
   EXPECT_EQ(tokens[0].text_, "prefix$VAR");
@@ -198,9 +197,7 @@ TEST_F(VariableLexerTest, VariableInWord) {
 }
 
 TEST_F(VariableLexerTest, InvalidVariableName) {
-  auto result = parser::tokenize("$123invalid");
-  ASSERT_TRUE(result.has_value());
-  auto& tokens = *result;
+  auto tokens = collect_tokens("$123invalid");
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].kind_, hsh::parser::TokenKind::Word);
 }

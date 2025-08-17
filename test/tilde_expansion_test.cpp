@@ -1,14 +1,17 @@
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
+
+#include "test_utils.h"
 
 import hsh.parser;
 import hsh.shell;
 
 using hsh::parser::parse_command_line;
-using hsh::parser::tokenize;
 using hsh::parser::TokenKind;
 using hsh::shell::expand_tilde;
+using hsh::test::collect_tokens; // namespace
 
 TEST(TildeExpansion, HomeBasic) {
   std::string home = "/tmp/hsh_home_test";
@@ -37,37 +40,33 @@ TEST(TildeExpansion, NoExpansionCases) {
 
 TEST(TildeExpansion, LeadingQuotedFlagsFromLexer) {
   {
-    auto res = tokenize("'~'\n");
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res->size(), 2);
-    auto const& t = (*res)[0];
+    auto res = collect_tokens("'~'\n");
+    ASSERT_EQ(res.size(), 2);
+    auto const& t = res[0];
     ASSERT_EQ(t.kind_, TokenKind::Word);
     EXPECT_EQ(t.text_, "~");
     EXPECT_TRUE(t.leading_quoted_);
   }
   {
-    auto res = tokenize("\"~\"\n");
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res->size(), 2);
-    auto const& t = (*res)[0];
+    auto res = collect_tokens("\"~\"\n");
+    ASSERT_EQ(res.size(), 2);
+    auto const& t = res[0];
     ASSERT_EQ(t.kind_, TokenKind::Word);
     EXPECT_EQ(t.text_, "~");
     EXPECT_TRUE(t.leading_quoted_);
   }
   {
-    auto res = tokenize("~\n");
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res->size(), 2);
-    auto const& t = (*res)[0];
+    auto res = collect_tokens("~\n");
+    ASSERT_EQ(res.size(), 2);
+    auto const& t = res[0];
     ASSERT_EQ(t.kind_, TokenKind::Word);
     EXPECT_EQ(t.text_, "~");
     EXPECT_FALSE(t.leading_quoted_);
   }
   {
-    auto res = tokenize("'a'~\n");
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res->size(), 2);
-    auto const& t = (*res)[0];
+    auto res = collect_tokens("'a'~\n");
+    ASSERT_EQ(res.size(), 2);
+    auto const& t = res[0];
     ASSERT_EQ(t.kind_, TokenKind::Word);
     EXPECT_EQ(t.text_, "a~");
     EXPECT_TRUE(t.leading_quoted_);

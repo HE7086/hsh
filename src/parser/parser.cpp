@@ -15,47 +15,72 @@ Token const EMPTY_TOKEN{"", TokenKind::Invalid};
 
 } // namespace
 
-std::expected<std::unique_ptr<ListAST>, ParseError> Parser::parse(Tokens const& tokens) {
-  reset(tokens);
+std::expected<std::unique_ptr<ListAST>, ParseError> Parser::parse(std::string_view input) {
+  auto init_result = initialize(input);
+  if (!init_result) {
+    return std::unexpected(init_result.error());
+  }
   return parse_list();
 }
 
-std::expected<std::unique_ptr<ListAST>, ParseError> Parser::parse(std::string_view input) {
-  auto token_result = tokenize(input);
-  if (!token_result) {
-    return std::unexpected(ParseError(token_result.error().message(), token_result.error().position()));
-  }
-  return parse(*token_result);
+std::expected<void, ParseError> Parser::initialize(std::string_view input) {
+  lexer_.emplace(input);
+  lookahead_valid_ = false;
+  current_         = std::nullopt;
+  lookahead_       = std::nullopt;
+
+  return advance_token();
 }
 
-void Parser::reset(Tokens const& tokens) noexcept {
-  tokens_        = &tokens;
-  current_token_ = 0;
+std::expected<void, ParseError> Parser::advance_token() {
+  if (!lexer_) {
+    return std::unexpected(ParseError("No lexer available", 0));
+  }
+
+  if (lookahead_valid_) {
+    current_         = std::move(lookahead_);
+    lookahead_       = std::nullopt;
+    lookahead_valid_ = false;
+  } else {
+    auto token_result = lexer_->next_token();
+    if (!token_result) {
+      return std::unexpected(ParseError(token_result.error().message(), token_result.error().position()));
+    }
+    current_ = std::move(*token_result);
+  }
+
+  return {};
 }
 
 bool Parser::at_end() const noexcept {
-  return current_token_ >= tokens_->size();
+  return !current_.has_value();
 }
 
 Token const& Parser::current_token() const noexcept {
-  if (at_end()) {
-    return EMPTY_TOKEN;
+  if (current_.has_value()) {
+    return *current_;
   }
-  return (*tokens_)[current_token_];
+  return EMPTY_TOKEN;
 }
 
-Token const& Parser::peek_token(size_t offset) const noexcept {
-  size_t pos = current_token_ + offset;
-  if (pos >= tokens_->size()) {
-    return EMPTY_TOKEN;
+Token const& Parser::peek_token(size_t offset) noexcept {
+  if (offset == 1 && lexer_) {
+    if (!lookahead_valid_) {
+      auto* mutable_this = this;
+      if (auto token_result = lexer_->peek_token(); token_result && token_result->has_value()) {
+        mutable_this->lookahead_       = **token_result;
+        mutable_this->lookahead_valid_ = true;
+        return *mutable_this->lookahead_;
+      }
+    } else {
+      return *lookahead_;
+    }
   }
-  return (*tokens_)[pos];
+  return EMPTY_TOKEN;
 }
 
 void Parser::advance() noexcept {
-  if (!at_end()) {
-    ++current_token_;
-  }
+  [[maybe_unused]] auto result = advance_token();
 }
 
 bool Parser::match(TokenKind kind) const noexcept {
@@ -71,7 +96,8 @@ bool Parser::consume(TokenKind kind) noexcept {
 }
 
 ParseError Parser::error(std::string_view message) const noexcept {
-  return ParseError{std::format("Parse error at token {}: {}", current_token_, message), current_token_};
+  size_t position = lexer_ ? lexer_->position() : 0;
+  return ParseError{std::format("Parse error at position {}: {}", position, message), position};
 }
 
 void Parser::skip_newlines() noexcept {

@@ -23,20 +23,24 @@ void expand_alias_in_simple_command(parser::SimpleCommandAST& cmd, ShellState co
       return;
     }
 
-    auto lexed = parser::tokenize(*maybe);
-    if (!lexed) {
-      return; // on lex error, skip expansion
-    }
-
+    parser::Lexer            lexer{*maybe};
     std::vector<std::string> alias_words;
     std::vector<bool>        alias_quoted;
-    alias_words.reserve(lexed->size());
-    alias_quoted.reserve(lexed->size());
-    for (auto const& tok : *lexed) {
-      if (tok.kind_ == parser::TokenKind::Word) {
-        alias_words.push_back(tok.text_);
-        alias_quoted.push_back(tok.leading_quoted_);
-      } else if (tok.kind_ == parser::TokenKind::Newline) {
+
+    while (!lexer.at_end()) {
+      auto token_result = lexer.next_token();
+      if (!token_result) {
+        return;
+      }
+
+      if (token_result->has_value()) {
+        if (auto const& tok = **token_result; tok.kind_ == parser::TokenKind::Word) {
+          alias_words.push_back(tok.text_);
+          alias_quoted.push_back(tok.leading_quoted_);
+        } else if (tok.kind_ == parser::TokenKind::Newline) {
+          break;
+        }
+      } else {
         break;
       }
     }

@@ -139,11 +139,6 @@ ExecutionResult Shell::execute_command_string(std::string command, ExecutionCont
     std::println("Executing command: {}", command);
   }
 
-  if (auto token_result = parser::tokenize(command); !token_result) {
-    std::println(stderr, "Lexer error: {}", token_result.error().message());
-    return {1, false};
-  }
-
   auto parse_result = parser::parse_command_line(command);
   if (!parse_result) {
     std::println(stderr, "Parse error: {}", parse_result.error().message());

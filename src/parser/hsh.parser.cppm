@@ -2,6 +2,7 @@ module;
 
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -88,8 +89,6 @@ struct Token {
   ~Token()                           = default;
 };
 
-using Tokens = std::vector<Token>;
-
 struct LexError {
   std::string message_;
   size_t      position_ = 0;
@@ -106,8 +105,30 @@ struct LexError {
   [[nodiscard]] size_t             position() const noexcept;
 };
 
-// Tokenize a single command line string (POSIX shell rules subset).
-std::expected<Tokens, LexError> tokenize(std::string_view input);
+
+class Lexer {
+  std::string_view input_;
+  size_t           position_ = 0;
+
+public:
+  explicit Lexer(std::string_view input) noexcept;
+
+  Lexer(Lexer const&)                = delete;
+  Lexer& operator=(Lexer const&)     = delete;
+  Lexer(Lexer&&) noexcept            = default;
+  Lexer& operator=(Lexer&&) noexcept = default;
+  ~Lexer()                           = default;
+
+  std::expected<std::optional<Token>, LexError> next_token();
+
+  [[nodiscard]] std::expected<std::optional<Token>, LexError> peek_token();
+  [[nodiscard]] bool                                          at_end() const noexcept;
+  [[nodiscard]] size_t                                        position() const noexcept;
+  void                                                        reset() noexcept;
+
+private:
+  std::expected<std::optional<Token>, LexError> tokenize_next();
+};
 
 enum class ASTKind {
   SimpleCommand,
@@ -266,23 +287,21 @@ struct ParseError {
 
 // recursive descent parser
 class Parser {
-  // tokens are owned by a local vector in parse() function.
-  Tokens const* tokens_        = nullptr;
-  size_t        current_token_ = 0;
+  std::optional<Lexer> lexer_;
+  std::optional<Token> current_         = std::nullopt;
+  std::optional<Token> lookahead_       = std::nullopt;
+  bool                 lookahead_valid_ = false;
 
 public:
-  // Parse a complete command line into AST
-  // Returns either a valid AST or a parse error with context
-  std::expected<std::unique_ptr<ListAST>, ParseError> parse(Tokens const& tokens);
-
-  // Parse from string input
   std::expected<std::unique_ptr<ListAST>, ParseError> parse(std::string_view input);
 
 private:
-  void                       reset(Tokens const& tokens) noexcept;
+  std::expected<void, ParseError> initialize(std::string_view input);
+  std::expected<void, ParseError> advance_token();
+
   [[nodiscard]] bool         at_end() const noexcept;
   [[nodiscard]] Token const& current_token() const noexcept;
-  [[nodiscard]] Token const& peek_token(size_t offset = 1) const noexcept;
+  [[nodiscard]] Token const& peek_token(size_t offset = 1) noexcept;
   void                       advance() noexcept;
   [[nodiscard]] bool         match(TokenKind kind) const noexcept;
   bool                       consume(TokenKind kind) noexcept;

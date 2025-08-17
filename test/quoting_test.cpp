@@ -1,48 +1,49 @@
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
+
+#include "test_utils.h"
 
 import hsh.parser;
 
 using hsh::parser::parse_command_line;
-using hsh::parser::tokenize;
 using hsh::parser::TokenKind;
+using hsh::test::collect_tokens; // namespace
 
 TEST(Quoting, SingleQuotesLiteral) {
-  auto res = tokenize("'a b # c'\n");
-  ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(res->size(), 2);
-  auto const& w = (*res)[0];
+  auto res = collect_tokens("'a b # c'\n");
+  ASSERT_EQ(res.size(), 2);
+  auto const& w = res[0];
   EXPECT_EQ(w.kind_, TokenKind::Word);
   EXPECT_EQ(w.text_, "a b # c");
   EXPECT_TRUE(w.leading_quoted_);
-  EXPECT_EQ((*res)[1].kind_, TokenKind::Newline);
+  EXPECT_EQ(res[1].kind_, TokenKind::Newline);
 }
 
 TEST(Quoting, DoubleQuotesEscapes) {
-  auto res = tokenize("\"a\\\"b\\\\c\\$d\\`e\\xf\"\n");
-  ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(res->size(), 2);
-  auto const& w = (*res)[0];
+  auto res = collect_tokens("\"a\\\"b\\\\c\\$d\\`e\\xf\"\n");
+  ASSERT_EQ(res.size(), 2);
+  auto const& w = res[0];
   EXPECT_EQ(w.kind_, TokenKind::Word);
   EXPECT_EQ(w.text_, "a\"b\\c$d`e\\xf");
   EXPECT_TRUE(w.leading_quoted_);
 }
 
 TEST(Quoting, MixedConcatenation) {
-  auto res = tokenize("foo' bar'\" baz\"\\ qux\n");
-  ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(res->size(), 2);
-  auto const& w = (*res)[0];
+  auto res = collect_tokens("foo' bar'\" baz\"\\ qux\n");
+  ASSERT_EQ(res.size(), 2);
+  auto const& w = res[0];
   EXPECT_EQ(w.kind_, TokenKind::Word);
   EXPECT_EQ(w.text_, "foo bar baz qux");
   EXPECT_FALSE(w.leading_quoted_);
-  EXPECT_EQ((*res)[1].kind_, TokenKind::Newline);
+  EXPECT_EQ(res[1].kind_, TokenKind::Newline);
 }
 
 TEST(Quoting, LeadingQuotedFlagWithBackslash) {
-  auto res = tokenize("\\a\n");
-  ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(res->size(), 2);
-  auto const& w = (*res)[0];
+  auto res = collect_tokens("\\a\n");
+  ASSERT_EQ(res.size(), 2);
+  auto const& w = res[0];
   EXPECT_EQ(w.kind_, TokenKind::Word);
   EXPECT_EQ(w.text_, "a");
   EXPECT_TRUE(w.leading_quoted_);
