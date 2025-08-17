@@ -1,6 +1,0 @@
-CompileFlags:
-  CompilationDatabase: build
-
-Diagnostics:
-  ClangTidy:
-    UseBuildDir: Yes
