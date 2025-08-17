@@ -28,12 +28,12 @@ int run_interactive_mode_with_shell(Shell& shell, bool verbose) {
   std::string input;
 
   while (!shell.should_exit()) {
-    std::print("{}", shell.build_prompt());
+    std::print(stderr, "{}", shell.build_prompt());
 
     input.clear();
     if (!std::getline(std::cin, input)) {
       if (std::cin.eof()) {
-        std::println("");
+        std::println(stderr, "");
         break;
       }
       std::cin.clear();
