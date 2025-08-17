@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+#include <print>
 
 import hsh.cli;
 import hsh.shell;
@@ -10,14 +10,14 @@ int main(int argc, char* argv[]) {
   auto args   = parser.parse(argc, argv);
 
   if (args.has_error()) {
-    fmt::println("Error: {}", args.error_message());
-    fmt::println("");
-    fmt::print("{}", parser.generate_help());
+    std::println("Error: {}", args.error_message());
+    std::println("");
+    std::print("{}", parser.generate_help());
     return 1;
   }
 
   if (args.has("help")) {
-    fmt::print("{}", parser.generate_help());
+    std::print("{}", parser.generate_help());
     return 0;
   }
   if (args.has("version")) {
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
   if (args.has("command")) {
     auto command = args.get("command");
     if (!command) {
-      fmt::println("Error: -c option requires a command argument");
+      std::println("Error: -c option requires a command argument");
       return 1;
     }
     return hsh::shell::run_command(*command, verbose);

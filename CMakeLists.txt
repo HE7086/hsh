@@ -15,12 +15,9 @@ include(CpuOptimization)
 
 enable_testing()
 
-find_package(fmt REQUIRED)
-
 add_library(hsh_common INTERFACE)
 target_compile_options(hsh_common INTERFACE -Wall -Wextra -Wpedantic -Werror)
 target_compile_options(hsh_common INTERFACE -fno-exceptions -fvisibility=hidden)
-target_link_libraries(hsh_common INTERFACE fmt::fmt)
 apply_cpu_optimizations(hsh_common)
 
 add_subdirectory(src)

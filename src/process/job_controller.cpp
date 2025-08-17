@@ -2,11 +2,10 @@ module;
 
 #include <chrono>
 #include <memory>
+#include <print>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <fmt/core.h>
 
 module hsh.process;
 
@@ -72,10 +71,10 @@ void JobController::update_job_status(Job& job) {
 
   if (job.process_group_->all_completed()) {
     job.status_ = JobStatus::Completed;
-    fmt::println("[{}] Done: {}", job.id_, job.command_line_);
+    std::println("[{}] Done: {}", job.id_, job.command_line_);
   } else if (!job.process_group_->any_running()) {
     job.status_ = JobStatus::Terminated;
-    fmt::println("[{}] Terminated: {}", job.id_, job.command_line_);
+    std::println("[{}] Terminated: {}", job.id_, job.command_line_);
   }
 }
 

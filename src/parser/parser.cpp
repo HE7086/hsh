@@ -1,10 +1,9 @@
 module;
 
 #include <expected>
+#include <format>
 #include <memory>
 #include <string_view>
-
-#include <fmt/format.h>
 
 module hsh.parser;
 
@@ -72,7 +71,7 @@ bool Parser::consume(TokenKind kind) noexcept {
 }
 
 ParseError Parser::error(std::string_view message) const noexcept {
-  return ParseError{fmt::format("Parse error at token {}: {}", current_token_, message), current_token_};
+  return ParseError{std::format("Parse error at token {}: {}", current_token_, message), current_token_};
 }
 
 void Parser::skip_newlines() noexcept {

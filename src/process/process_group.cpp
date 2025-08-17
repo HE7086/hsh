@@ -7,9 +7,9 @@ module;
 #include <functional>
 #include <memory>
 #include <optional>
+#include <print>
 #include <thread>
 #include <vector>
-#include <fmt/core.h>
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -82,7 +82,7 @@ bool ProcessGroup::start_all() {
 
     if (!process->start()) {
       all_started = false;
-      fmt::println(stderr, "Failed to start process");
+      std::println(stderr, "Failed to start process");
       continue;
     }
 
@@ -94,11 +94,11 @@ bool ProcessGroup::start_all() {
 
       if (setpgid(child_pid, child_pid) == -1 && errno != EACCES) {
         // EACCES if child already set the process group
-        fmt::println(stderr, "setpgid failed for process group leader: {}", strerror(errno));
+        std::println(stderr, "setpgid failed for process group leader: {}", strerror(errno));
       }
     } else {
       if (setpgid(child_pid, group_id_) == -1 && errno != EACCES) {
-        fmt::println(stderr, "setpgid failed for child process: {}", strerror(errno));
+        std::println(stderr, "setpgid failed for child process: {}", strerror(errno));
       }
     }
 
@@ -106,7 +106,7 @@ bool ProcessGroup::start_all() {
   }
 
   if (is_background_ && all_started) {
-    fmt::println("[Process group {} started in background]", group_id_);
+    std::println("[Process group {} started in background]", group_id_);
   }
 
   return all_started;
@@ -188,7 +188,7 @@ bool ProcessGroup::
     signal_all(int signal, char const* signal_name, std::function<bool(Process&)> const& individual_operation) const {
   if (group_id_ > 0 && group_created_) {
     if (killpg(group_id_, signal) == -1) {
-      fmt::println(stderr, "killpg({}) failed: {}", signal_name, strerror(errno));
+      std::println(stderr, "killpg({}) failed: {}", signal_name, strerror(errno));
     } else {
       return true;
     }

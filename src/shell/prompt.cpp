@@ -1,12 +1,11 @@
 module;
 
 #include <array>
+#include <format>
 #include <string>
 
 #include <pwd.h>
 #include <unistd.h>
-
-#include <fmt/core.h>
 
 import hsh.core;
 
@@ -53,7 +52,7 @@ std::string build_shell_prompt(ShellState& state) noexcept {
   std::string cwd         = state.get_cached_cwd();
   char        prompt_char = getuid() == 0 ? '#' : '$';
 
-  return fmt::format("[{}@{} {}]{} ", cached_user(), cached_host(), cwd, prompt_char);
+  return std::format("[{}@{} {}]{} ", cached_user(), cached_host(), cwd, prompt_char);
 }
 
 

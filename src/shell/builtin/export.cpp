@@ -1,13 +1,11 @@
 module;
 
+#include <format>
+#include <print>
 #include <span>
 #include <string>
-#include <string_view>
 
 #include <unistd.h>
-
-#include <fmt/core.h>
-#include <fmt/format.h>
 
 import hsh.core;
 
@@ -20,7 +18,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
 
   if (args.size() == 1) {
     for (auto const& [name, value] : core::EnvironmentManager::instance().list()) {
-      std::string output = fmt::format("{}={}\n", name, value);
+      std::string output = std::format("{}={}\n", name, value);
       write(STDOUT_FILENO, output.data(), output.size());
     }
     return 0;
@@ -33,8 +31,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
 
     if (pos == std::string::npos) {
       if (!core::is_valid_identifier(name)) {
-        std::string output = fmt::format("export: not a valid identifier: {}\n", name);
-        write(STDERR_FILENO, output.data(), output.size());
+        std::println(stderr, "export: not a valid identifier: {}", name);
         status = 1;
         continue;
       }
@@ -54,8 +51,7 @@ int export_cmd(ShellState& state, std::span<std::string const> args) {
     value = args[i].substr(pos + 1);
 
     if (!core::is_valid_identifier(name)) {
-      std::string output = fmt::format("export: not a valid identifier: {}\n", name);
-      write(STDERR_FILENO, output.data(), output.size());
+      std::println(stderr, "export: not a valid identifier: {}", name);
       status = 1;
       continue;
     }

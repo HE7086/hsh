@@ -3,8 +3,10 @@ module;
 #include <cerrno>
 #include <cstring>
 #include <expected>
+#include <format>
 #include <fstream>
 #include <memory>
+#include <print>
 #include <span>
 #include <string>
 #include <string_view>
@@ -14,7 +16,6 @@ module;
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <fmt/format.h>
 
 import hsh.core;
 import hsh.parser;
@@ -135,17 +136,17 @@ ExecutionResult Shell::execute_command_string(std::string command, ExecutionCont
   }
 
   if (context.verbose_) {
-    fmt::println("Executing command: {}", command);
+    std::println("Executing command: {}", command);
   }
 
   if (auto token_result = parser::tokenize(command); !token_result) {
-    fmt::println(stderr, "Lexer error: {}", token_result.error().message());
+    std::println(stderr, "Lexer error: {}", token_result.error().message());
     return {1, false};
   }
 
   auto parse_result = parser::parse_command_line(command);
   if (!parse_result) {
-    fmt::println(stderr, "Parse error: {}", parse_result.error().message());
+    std::println(stderr, "Parse error: {}", parse_result.error().message());
     return {1, false};
   }
 
@@ -271,7 +272,7 @@ ExecutionResult Shell::execute_command_string(std::string command, ExecutionCont
     }
 
     if (context.verbose_) {
-      fmt::println("Pipeline exit code: {}", last_exit_code);
+      std::println("Pipeline exit code: {}", last_exit_code);
     }
 
     // && and || operators
@@ -381,7 +382,7 @@ ExecutionResult Shell::execute_command_string(std::string command, ExecutionCont
 
         last_exit_code = result.exit_code_;
         if (context.verbose_) {
-          fmt::println("Continuation exit code: {}", last_exit_code);
+          std::println("Continuation exit code: {}", last_exit_code);
         }
         if (shell_state_.should_exit()) {
           return {shell_state_.get_exit_status(), false};
@@ -416,14 +417,14 @@ std::expected<std::string, std::string> Shell::execute_and_capture_output(std::s
   char temp_filename[] = "/tmp/hsh_cmd_subst_XXXXXX";
   int  temp_fd         = mkstemp(temp_filename);
   if (temp_fd == -1) {
-    return std::unexpected(fmt::format("Failed to create temporary file: {}", std::strerror(errno)));
+    return std::unexpected(std::format("Failed to create temporary file: {}", std::strerror(errno)));
   }
   close(temp_fd);
 
   if (input.starts_with("echo ")) {
     input = "/bin/echo " + input.substr(5);
   }
-  std::string redirected_command = fmt::format("{} > {}", input, temp_filename);
+  std::string redirected_command = std::format("{} > {}", input, temp_filename);
 
   auto result = execute_command_string(redirected_command);
 
@@ -444,7 +445,7 @@ std::expected<std::string, std::string> Shell::execute_and_capture_output(std::s
   unlink(temp_filename);
 
   if (!result.success_) {
-    return std::unexpected(fmt::format("Command failed with exit code: {}", result.exit_code_));
+    return std::unexpected(std::format("Command failed with exit code: {}", result.exit_code_));
   }
 
   return output;

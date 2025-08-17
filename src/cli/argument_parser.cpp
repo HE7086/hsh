@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <format>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -11,8 +12,6 @@ module;
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <fmt/format.h>
 
 import hsh.core;
 
@@ -127,7 +126,7 @@ ParseResult ArgumentParser::parse(std::span<std::string const> args) const {
       auto option_index = find_option(option_name);
 
       if (!option_index) {
-        return create_error(fmt::format("Unknown option: {}", arg));
+        return create_error(std::format("Unknown option: {}", arg));
       }
 
       Option const& option       = options_[*option_index];
@@ -140,14 +139,14 @@ ParseResult ArgumentParser::parse(std::span<std::string const> args) const {
           if (option.long_name() == "command") {
             return create_error("-c option requires a command");
           }
-          return create_error(fmt::format("Option {} requires a value", arg));
+          return create_error(std::format("Option {} requires a value", arg));
         }
 
         ++i;
         std::string const& value = args[i];
 
         if (option.validator_ && !option.validator_(value)) {
-          return create_error(fmt::format("Invalid value for option {}: {}", arg, value));
+          return create_error(std::format("Invalid value for option {}: {}", arg, value));
         }
 
         result.option_values_[option.long_name()].push_back(value);
@@ -158,7 +157,7 @@ ParseResult ArgumentParser::parse(std::span<std::string const> args) const {
             ++i;
             std::string const& next_value = args[i];
             if (option.validator_ && !option.validator_(next_value)) {
-              return create_error(fmt::format("Invalid value for option {}: {}", arg, next_value));
+              return create_error(std::format("Invalid value for option {}: {}", arg, next_value));
             }
             result.option_values_[option.long_name()].push_back(next_value);
           }
@@ -167,7 +166,7 @@ ParseResult ArgumentParser::parse(std::span<std::string const> args) const {
     } else {
       // Positional argument
       if (!allow_positional_args_) {
-        return create_error(fmt::format("Unexpected positional argument: {}", arg));
+        return create_error(std::format("Unexpected positional argument: {}", arg));
       }
       result.positional_args_.push_back(arg);
     }
@@ -177,7 +176,7 @@ ParseResult ArgumentParser::parse(std::span<std::string const> args) const {
     Option const& option = options_[i];
 
     if (option.is_required() && !option_seen[i]) {
-      return create_error(fmt::format("Required option --{} not provided", option.long_name()));
+      return create_error(std::format("Required option --{} not provided", option.long_name()));
     }
 
     if (!option_seen[i] && option.default_value()) {

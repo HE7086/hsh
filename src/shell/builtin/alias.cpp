@@ -1,13 +1,12 @@
 module;
 
+#include <format>
 #include <optional>
+#include <print>
 #include <span>
 #include <string>
-#include <string_view>
 
 #include <unistd.h>
-
-#include <fmt/format.h>
 
 module hsh.shell;
 
@@ -19,22 +18,21 @@ int alias_cmd(ShellState& state, std::span<std::string const> args) {
 
   if (args.size() == 1) {
     for (auto const& [name, value] : state.aliases_) {
-      std::string output = fmt::format("alias {}='{}'\n", name, value);
+      std::string output = std::format("alias {}='{}'\n", name, value);
       write(STDOUT_FILENO, output.data(), output.size());
     }
     return 0;
   }
 
   for (size_t i = 1; i < args.size(); ++i) {
-    auto& spec = args[i];
-    auto  pos  = spec.find('=');
+    auto const& spec = args[i];
+    auto        pos  = spec.find('=');
     if (pos == std::string::npos) {
       if (auto val = state.get_alias(spec)) {
-        std::string output = fmt::format("alias {}='{}'\n", spec, *val);
+        std::string output = std::format("alias {}='{}'\n", spec, *val);
         write(STDOUT_FILENO, output.data(), output.size());
       } else {
-        std::string output = fmt::format("alias: not found: {}\n", spec);
-        write(STDERR_FILENO, output.data(), output.size());
+        std::println(stderr, "alias: not found: {}", spec);
         status = 1;
       }
       continue;
@@ -50,8 +48,7 @@ int alias_cmd(ShellState& state, std::span<std::string const> args) {
 // unalias: remove names or -a to clear all
 int unalias_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 1) {
-    std::string output = "unalias: usage: unalias [-a] name [name ...]\n";
-    write(STDERR_FILENO, output.data(), output.size());
+    std::println(stderr, "unalias: usage: unalias [-a] name [name ...]");
     return 1;
   }
   if (args.size() == 2 && args[1] == "-a") {
@@ -65,8 +62,7 @@ int unalias_cmd(ShellState& state, std::span<std::string const> args) {
   }
   for (size_t i = 1; i < args.size(); ++i) {
     if (!state.unset_alias(args[i])) {
-      std::string output = fmt::format("unalias: not found: {}\n", args[i]);
-      write(STDERR_FILENO, output.data(), output.size());
+      std::println(stderr, "unalias: not found: {}", args[i]);
       status = 1;
     }
   }

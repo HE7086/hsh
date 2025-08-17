@@ -1,9 +1,8 @@
 module;
 
 #include <iostream>
+#include <print>
 #include <string>
-
-#include <fmt/core.h>
 
 module hsh.shell;
 
@@ -30,14 +29,14 @@ int run_interactive_mode_with_shell(Shell& shell, bool verbose, bool quiet) {
 
   while (!shell.should_exit()) {
     if (!quiet) {
-      fmt::print("{}", shell.build_prompt());
+      std::print("{}", shell.build_prompt());
     }
 
     input.clear();
     if (!std::getline(std::cin, input)) {
       if (std::cin.eof()) {
         if (!quiet) {
-          fmt::println("");
+          std::println("");
         }
         break;
       }

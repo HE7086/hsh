@@ -1,12 +1,11 @@
 module;
 
+#include <format>
+#include <print>
 #include <span>
 #include <string>
 
 #include <unistd.h>
-
-#include <fmt/core.h>
-#include <fmt/format.h>
 
 module hsh.shell;
 
@@ -20,11 +19,11 @@ int set_cmd(ShellState& state, std::span<std::string const> args) {
   if (args.size() == 2 && (args[1] == "-o" || args[1] == "+o")) {
     bool pf = state.is_pipefail();
     if (args[1] == "-o") {
-      std::string output = fmt::format("pipefail\t{}\n", pf ? "on" : "off");
+      std::string output = std::format("pipefail\t{}\n", pf ? "on" : "off");
       write(STDOUT_FILENO, output.data(), output.size());
       return 0;
     }
-    std::string output = fmt::format("set {}o pipefail\n", pf ? "-" : "+");
+    std::string output = std::format("set {}o pipefail\n", pf ? "-" : "+");
     write(STDOUT_FILENO, output.data(), output.size());
     return 0;
   }
@@ -35,13 +34,11 @@ int set_cmd(ShellState& state, std::span<std::string const> args) {
       state.set_pipefail(enable);
       return 0;
     }
-    std::string output = fmt::format("set: invalid option name: {}\n", args[2]);
-    write(STDERR_FILENO, output.data(), output.size());
+    std::println(stderr, "set: invalid option name: {}", args[2]);
     return 1;
   }
 
-  std::string output = "usage: set [-o option] | [+o option]\n";
-  write(STDERR_FILENO, output.data(), output.size());
+  std::println(stderr, "usage: set [-o option] | [+o option]");
   return 1;
 }
 

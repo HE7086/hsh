@@ -6,12 +6,11 @@ module;
 #include <functional>
 #include <memory>
 #include <optional>
+#include <print>
 #include <vector>
 
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <fmt/core.h>
 
 module hsh.process;
 
@@ -20,7 +19,7 @@ namespace hsh::process {
 std::unique_ptr<Pipe> Pipe::create() {
   auto pipe = std::make_unique<Pipe>();
   if (pipe2(pipe->fds_.data(), O_CLOEXEC) == -1) {
-    fmt::println(stderr, "Failed to create pipe: {}", std::strerror(errno));
+    std::println(stderr, "Failed to create pipe: {}", std::strerror(errno));
     return nullptr;
   }
   return pipe;
@@ -76,7 +75,7 @@ std::unique_ptr<PipeManager> PipeManager::create(size_t num_pipes) {
   for (size_t i = 0; i < num_pipes; ++i) {
     auto pipe = Pipe::create();
     if (!pipe) {
-      fmt::println(stderr, "Failed to create pipe {} of {}", i, num_pipes);
+      std::println(stderr, "Failed to create pipe {} of {}", i, num_pipes);
       return nullptr;
     }
     manager->pipes_.push_back(std::move(pipe));

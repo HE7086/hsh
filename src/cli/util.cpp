@@ -1,12 +1,11 @@
 module;
 
 #include <array>
+#include <print>
 #include <string>
 
 #include <linux/limits.h>
 #include <unistd.h>
-
-#include <fmt/core.h>
 
 import hsh.core;
 
@@ -32,8 +31,8 @@ void export_shell_env(int argc, char** argv) noexcept {
 }
 
 void print_version() {
-  fmt::println("hsh shell version {}", core::VERSION);
-  // fmt::println("Built: {}", core::BUILD_DATE);
+  std::println("hsh shell version {}", core::VERSION);
+  // std::println("Built: {}", core::BUILD_DATE);
 }
 
 } // namespace hsh::cli
