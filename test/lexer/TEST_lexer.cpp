@@ -12,7 +12,7 @@ protected:
 
     int   safety_limit = 1000;
     Token token        = lexer.next();
-    while (token.kind_ != TokenType::EndOfFile) {
+    while (token.kind_ != Token::Type::EndOfFile) {
       tokens.push_back(token);
       token = lexer.next();
     }
@@ -23,8 +23,8 @@ protected:
     return tokens;
   }
 
-  auto token_kinds(std::vector<Token> const& tokens) -> std::vector<TokenType> {
-    std::vector<TokenType> kinds;
+  auto token_kinds(std::vector<Token> const& tokens) -> std::vector<Token::Type> {
+    std::vector<Token::Type> kinds;
     kinds.reserve(tokens.size());
     for (auto const& token : tokens) {
       kinds.push_back(token.kind_);
@@ -36,14 +36,14 @@ protected:
 TEST_F(LexerTest, EmptyInput) {
   auto tokens = tokenize_all("");
   EXPECT_EQ(tokens.size(), 1);
-  EXPECT_EQ(tokens[0].kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens[0].kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, SimpleCommand) {
   auto tokens = tokenize_all("echo hello");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Word, TokenType::Word, TokenType::EndOfFile}));
+  EXPECT_EQ(kinds, (std::vector<Token::Type>{Token::Type::Word, Token::Type::Word, Token::Type::EndOfFile}));
 
   EXPECT_EQ(tokens[0].text_, "echo");
   EXPECT_EQ(tokens[1].text_, "hello");
@@ -55,8 +55,9 @@ TEST_F(LexerTest, Pipeline) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Word, TokenType::Word, TokenType::Pipe, TokenType::Word, TokenType::Word, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::Word, Token::Type::Pipe, Token::Type::Word, Token::Type::Word,
+          Token::Type::EndOfFile
       })
   );
 }
@@ -67,8 +68,8 @@ TEST_F(LexerTest, Redirection) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Word, TokenType::Word, TokenType::Greater, TokenType::Word, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::Word, Token::Type::Greater, Token::Type::Word, Token::Type::EndOfFile
       })
   );
 }
@@ -79,9 +80,9 @@ TEST_F(LexerTest, ComplexRedirection) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Word, TokenType::Number, TokenType::GreaterAnd, TokenType::Number, TokenType::Append,
-          TokenType::Word, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::Number, Token::Type::GreaterAnd, Token::Type::Number, Token::Type::Append,
+          Token::Type::Word, Token::Type::EndOfFile
       })
   );
 
@@ -95,8 +96,9 @@ TEST_F(LexerTest, LogicalOperators) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Word, TokenType::AndAnd, TokenType::Word, TokenType::OrOr, TokenType::Word, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::AndAnd, Token::Type::Word, Token::Type::OrOr, Token::Type::Word,
+          Token::Type::EndOfFile
       })
   );
 }
@@ -105,7 +107,7 @@ TEST_F(LexerTest, BackgroundProcess) {
   auto tokens = tokenize_all("long_command &");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Word, TokenType::Ampersand, TokenType::EndOfFile}));
+  EXPECT_EQ(kinds, (std::vector<Token::Type>{Token::Type::Word, Token::Type::Ampersand, Token::Type::EndOfFile}));
 }
 
 TEST_F(LexerTest, QuotedStrings) {
@@ -114,7 +116,9 @@ TEST_F(LexerTest, QuotedStrings) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{TokenType::Word, TokenType::SingleQuoted, TokenType::DoubleQuoted, TokenType::EndOfFile})
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::SingleQuoted, Token::Type::DoubleQuoted, Token::Type::EndOfFile
+      })
   );
 
   EXPECT_EQ(tokens[1].text_, "'single quoted'");
@@ -125,7 +129,7 @@ TEST_F(LexerTest, EscapedQuotes) {
   auto tokens = tokenize_all(R"(echo "escaped \"quote\"")");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Word, TokenType::DoubleQuoted, TokenType::EndOfFile}));
+  EXPECT_EQ(kinds, (std::vector<Token::Type>{Token::Type::Word, Token::Type::DoubleQuoted, Token::Type::EndOfFile}));
 
   EXPECT_EQ(tokens[1].text_, "\"escaped \\\"quote\\\"\"");
 }
@@ -136,7 +140,9 @@ TEST_F(LexerTest, CommandSubstitution) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{TokenType::Word, TokenType::DollarParen, TokenType::Backtick, TokenType::EndOfFile})
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::DollarParen, Token::Type::Backtick, Token::Type::EndOfFile
+      })
   );
 
   EXPECT_EQ(tokens[1].text_, "$(date)");
@@ -149,7 +155,9 @@ TEST_F(LexerTest, ParameterExpansion) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{TokenType::Word, TokenType::DollarBrace, TokenType::DollarBrace, TokenType::EndOfFile})
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::DollarBrace, Token::Type::DollarBrace, Token::Type::EndOfFile
+      })
   );
 
   EXPECT_EQ(tokens[1].text_, "${HOME}");
@@ -160,7 +168,7 @@ TEST_F(LexerTest, Assignment) {
   auto tokens = tokenize_all("VAR=value PATH=/usr/bin");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Assignment, TokenType::Assignment, TokenType::EndOfFile}));
+  EXPECT_EQ(kinds, (std::vector<Token::Type>{Token::Type::Assignment, Token::Type::Assignment, Token::Type::EndOfFile}));
 
   EXPECT_EQ(tokens[0].text_, "VAR=value");
   EXPECT_EQ(tokens[1].text_, "PATH=/usr/bin");
@@ -170,7 +178,7 @@ TEST_F(LexerTest, QuotedAssignment) {
   auto tokens = tokenize_all("MESSAGE=\"hello world\" PATH='/usr/local/bin'");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Assignment, TokenType::Assignment, TokenType::EndOfFile}));
+  EXPECT_EQ(kinds, (std::vector<Token::Type>{Token::Type::Assignment, Token::Type::Assignment, Token::Type::EndOfFile}));
 
   EXPECT_EQ(tokens[0].text_, "MESSAGE=\"hello world\"");
   EXPECT_EQ(tokens[1].text_, "PATH='/usr/local/bin'");
@@ -182,9 +190,10 @@ TEST_F(LexerTest, ReservedWords) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::If, TokenType::Word, TokenType::Semicolon, TokenType::Then, TokenType::Word, TokenType::Semicolon,
-          TokenType::Else, TokenType::Word, TokenType::Semicolon, TokenType::Fi, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::If, Token::Type::Word, Token::Type::Semicolon, Token::Type::Then, Token::Type::Word,
+          Token::Type::Semicolon, Token::Type::Else, Token::Type::Word, Token::Type::Semicolon, Token::Type::Fi,
+          Token::Type::EndOfFile
       })
   );
 }
@@ -196,10 +205,10 @@ TEST_F(LexerTest, ForLoop) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::For, TokenType::Word, TokenType::In, TokenType::Number, TokenType::Number, TokenType::Number,
-          TokenType::Semicolon, TokenType::Do, TokenType::Word, TokenType::Word, TokenType::Semicolon, TokenType::Done,
-          TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::For, Token::Type::Word, Token::Type::In, Token::Type::Number, Token::Type::Number,
+          Token::Type::Number, Token::Type::Semicolon, Token::Type::Do, Token::Type::Word, Token::Type::Word,
+          Token::Type::Semicolon, Token::Type::Done, Token::Type::EndOfFile
       })
   );
 }
@@ -210,9 +219,9 @@ TEST_F(LexerTest, WhileLoop) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::While, TokenType::Word, TokenType::Word, TokenType::Word, TokenType::Semicolon, TokenType::Do,
-          TokenType::Word, TokenType::Semicolon, TokenType::Done, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::While, Token::Type::Word, Token::Type::Word, Token::Type::Word, Token::Type::Semicolon,
+          Token::Type::Do, Token::Type::Word, Token::Type::Semicolon, Token::Type::Done, Token::Type::EndOfFile
       })
   );
 }
@@ -223,9 +232,9 @@ TEST_F(LexerTest, FunctionDefinition) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Function, TokenType::Word, TokenType::LeftBrace, TokenType::Word, TokenType::Word,
-          TokenType::Semicolon, TokenType::RightBrace, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Function, Token::Type::Word, Token::Type::LeftBrace, Token::Type::Word, Token::Type::Word,
+          Token::Type::Semicolon, Token::Type::RightBrace, Token::Type::EndOfFile
       })
   );
 }
@@ -234,7 +243,10 @@ TEST_F(LexerTest, Comments) {
   auto tokens = tokenize_all("echo hello # this is a comment");
   auto kinds  = token_kinds(tokens);
 
-  EXPECT_EQ(kinds, (std::vector<TokenType>{TokenType::Word, TokenType::Word, TokenType::Comment, TokenType::EndOfFile}));
+  EXPECT_EQ(
+      kinds,
+      (std::vector<Token::Type>{Token::Type::Word, Token::Type::Word, Token::Type::Comment, Token::Type::EndOfFile})
+  );
 
   EXPECT_EQ(tokens[2].text_, "# this is a comment");
 }
@@ -245,8 +257,9 @@ TEST_F(LexerTest, NewlineHandling) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{
-          TokenType::Word, TokenType::Word, TokenType::NewLine, TokenType::Word, TokenType::Word, TokenType::EndOfFile
+      (std::vector<Token::Type>{
+          Token::Type::Word, Token::Type::Word, Token::Type::NewLine, Token::Type::Word, Token::Type::Word,
+          Token::Type::EndOfFile
       })
   );
 }
@@ -262,8 +275,8 @@ TEST_F(LexerTest, ComplexExample) {
 
   // Should handle brackets, quoted strings, variables, redirections, etc.
   EXPECT_GT(kinds.size(), 10); // Should have many tokens
-  EXPECT_EQ(kinds.front(), TokenType::If);
-  EXPECT_EQ(kinds.back(), TokenType::EndOfFile);
+  EXPECT_EQ(kinds.front(), Token::Type::If);
+  EXPECT_EQ(kinds.back(), Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, PositionTracking) {
@@ -274,7 +287,7 @@ TEST_F(LexerTest, PositionTracking) {
   EXPECT_EQ(token1.column_, 1);
 
   auto token2 = lexer.next(); // newline
-  EXPECT_EQ(token2.kind_, TokenType::NewLine);
+  EXPECT_EQ(token2.kind_, Token::Type::NewLine);
   EXPECT_EQ(token2.line_, 1);
 
   auto token3 = lexer.next(); // "world"
@@ -311,7 +324,7 @@ TEST_F(LexerTest, HereDocRedirection) {
 
   EXPECT_EQ(
       kinds,
-      (std::vector<TokenType>{TokenType::Word, TokenType::LessLess, TokenType::Word, TokenType::EndOfFile})
+      (std::vector<Token::Type>{Token::Type::Word, Token::Type::LessLess, Token::Type::Word, Token::Type::EndOfFile})
   );
 }
 
@@ -321,7 +334,7 @@ TEST_F(LexerTest, ErrorTokens) {
   // The @ character should produce an error token
   bool found_error = false;
   for (auto const& token : tokens) {
-    if (token.kind_ == TokenType::Error) {
+    if (token.kind_ == Token::Type::Error) {
       found_error = true;
       break;
     }
@@ -334,28 +347,28 @@ TEST_F(LexerTest, SpecialCharacters) {
   auto tokens = tokenize_all("@#$%^&*");
   EXPECT_GT(tokens.size(), 1); // Should have at least EndOfFile
   // Last token should always be EndOfFile
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, UnderscoreVariables) {
   // Test variable names with underscores
   auto tokens = tokenize_all("_var __var var_ _");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, NumbersAndAlphabets) {
   // Test mixed alphanumeric
   auto tokens = tokenize_all("123abc abc123 _123");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, EmptyVariables) {
   // Test edge cases with dollar signs
   auto tokens = tokenize_all("$ $$ $123 $_");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, SpecialParameterTokens) {
@@ -364,11 +377,11 @@ TEST_F(LexerTest, SpecialParameterTokens) {
   auto kinds  = token_kinds(tokens);
 
   // All should be Word tokens
-  std::vector<TokenType> expected_kinds;
+  std::vector<Token::Type> expected_kinds;
   for (size_t i = 0; i < 8; ++i) { // 8 special parameters
-    expected_kinds.push_back(TokenType::Word);
+    expected_kinds.push_back(Token::Type::Word);
   }
-  expected_kinds.push_back(TokenType::EndOfFile);
+  expected_kinds.push_back(Token::Type::EndOfFile);
 
   EXPECT_EQ(kinds, expected_kinds);
 
@@ -387,21 +400,21 @@ TEST_F(LexerTest, AssignmentEdgeCases) {
   // Test assignment edge cases
   auto tokens = tokenize_all("= a= =b _= __=");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, QuoteMismatch) {
   // Test unmatched quotes (should not hang)
   auto tokens = tokenize_all("\"unclosed 'also unclosed `backtick");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 TEST_F(LexerTest, NestedStructures) {
   // Test deeply nested structures
   auto tokens = tokenize_all("$((((((nested)))))) ${{{{{var}}}}}");
   EXPECT_GT(tokens.size(), 1);
-  EXPECT_EQ(tokens.back().kind_, TokenType::EndOfFile);
+  EXPECT_EQ(tokens.back().kind_, Token::Type::EndOfFile);
 }
 
 } // namespace hsh::lexer::test

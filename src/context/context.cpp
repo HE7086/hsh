@@ -17,7 +17,6 @@ module;
 module hsh.context;
 
 import hsh.core;
-import hsh.job;
 
 namespace hsh::context {
 
@@ -160,8 +159,9 @@ auto Context::get_special_parameter(std::string const& name) const -> std::optio
       case '@': {
         // For $@, we return space-separated like $* for now
         // In actual shell expansion, $@ and $* behave differently in quotes
-        if (positional_parameters_.empty())
+        if (positional_parameters_.empty()) {
           return "";
+        }
         std::string result;
         for (size_t i = 0; i < positional_parameters_.size(); ++i) {
           if (i > 0) {
@@ -184,7 +184,7 @@ auto Context::get_special_parameter(std::string const& name) const -> std::optio
   }
 
   if (!name.empty()) {
-    size_t index;
+    size_t index = 0;
     if (auto [ptr, ec] = std::from_chars(name.data(), name.data() + name.size(), index);
         ec == std::errc{} && ptr == name.data() + name.size()) {
       if (index == 0) {
@@ -271,7 +271,6 @@ auto Context::create_scope() const -> Context {
 
   scope.options_     = options_;
   scope.exit_status_ = exit_status_;
-  scope.job_manager_ = job_manager_;
 
   return scope;
 }
@@ -316,14 +315,6 @@ void Context::refresh_host_cache() {
     return;
   }
   host_cache_.emplace("host");
-}
-
-auto Context::get_job_manager() const noexcept -> job::JobManager* {
-  return job_manager_;
-}
-
-void Context::set_job_manager(job::JobManager& job_manager) {
-  job_manager_ = &job_manager;
 }
 
 } // namespace hsh::context

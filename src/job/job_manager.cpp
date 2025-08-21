@@ -39,14 +39,11 @@ auto JobManager::check_background_jobs() -> std::vector<Job> {
 
     int status;
     if (pid_t result = waitpid(job.pid_, &status, WNOHANG); result == job.pid_) {
-      // Process has finished
       job.status_ = JobStatus::Done;
       completed_jobs.push_back(job);
     } else if (result == 0) {
-      // Process is still running
       continue;
     } else if (result == -1) {
-      // Error or process doesn't exist anymore
       job.status_ = JobStatus::Done;
       completed_jobs.push_back(job);
     }
@@ -57,10 +54,6 @@ auto JobManager::check_background_jobs() -> std::vector<Job> {
   }
 
   return completed_jobs;
-}
-
-auto JobManager::get_jobs() const -> std::vector<Job> const& {
-  return jobs_;
 }
 
 auto JobManager::process_completed_pid(pid_t pid) -> std::optional<Job> {

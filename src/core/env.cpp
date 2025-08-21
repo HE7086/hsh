@@ -9,10 +9,11 @@ module;
 #include <vector>
 
 #include <linux/limits.h>
-#include <pwd.h>
 #include <unistd.h>
 
-module hsh.core;
+module hsh.core.env;
+
+import hsh.core.constant;
 
 extern "C" {
   extern char** environ; // NOLINT

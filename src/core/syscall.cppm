@@ -40,7 +40,7 @@ auto change_directory(std::string const& path) -> Result<void>;
 auto get_current_directory() -> Result<std::string>;
 auto open_file(std::string const& path, int flags, mode_t mode = 0) -> Result<int>;
 auto duplicate_fd(int fd) -> Result<int>;
-auto duplicate_fd_to(int oldfd, int newfd) -> Result<void>;
+auto duplicate_fd_to(int old_fd, int new_fd) -> Result<void>;
 auto fork_process() -> Result<pid_t>;
 
 struct UserInfo {

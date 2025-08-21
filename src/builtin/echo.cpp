@@ -15,7 +15,7 @@ import hsh.core;
 
 namespace hsh::builtin {
 
-auto builtin_echo(std::span<std::string const> args, context::Context&) -> int {
+auto builtin_echo(std::span<std::string const> args, context::Context&, job::JobManager&) -> int {
   bool   newline   = true;
   size_t start_idx = 0;
 
@@ -24,7 +24,8 @@ auto builtin_echo(std::span<std::string const> args, context::Context&) -> int {
     start_idx = 1;
   }
 
-  std::string output = std::format("{}{}", core::util::join(args.begin() + start_idx, args.end()), newline ? "\n" : "");
+  std::string output = std::
+      format("{}{}", core::util::join(args.begin() + static_cast<long>(start_idx), args.end()), newline ? "\n" : "");
 
   if (auto result = core::syscall::write_fd(STDOUT_FILENO, output); !result) {
     std::println(stderr, "echo: write error: {}", std::strerror(result.error()));

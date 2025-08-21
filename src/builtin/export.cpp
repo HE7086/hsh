@@ -16,11 +16,11 @@ import hsh.core;
 
 namespace hsh::builtin {
 
-auto builtin_export(std::span<std::string const> args, context::Context& context) -> int {
+auto builtin_export(std::span<std::string const> args, context::Context& context, job::JobManager&) -> int {
   if (args.empty()) {
     for (auto const& [name, value] : context.list_variables()) {
       if (context.is_exported(std::string{name})) {
-        std::string output = std::format("{}=\"{}\"\n", name, value);
+        std::string output = std::format("{}={}\n", name, value);
         if (auto result = core::syscall::write_fd(STDOUT_FILENO, output); !result) {
           std::println(stderr, "export: write error: {}", std::strerror(result.error()));
           return 1;

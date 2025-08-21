@@ -14,4 +14,4 @@ target_sources(hsh_builtin
     jobs.cpp
 )
 
-target_link_libraries(hsh_builtin PRIVATE hsh_common hsh_core hsh_context)
+target_link_libraries(hsh_builtin PRIVATE hsh_common hsh_core hsh_context hsh_job)

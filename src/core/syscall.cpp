@@ -2,6 +2,7 @@ module;
 
 #include <array>
 #include <cerrno>
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <expected>
@@ -12,7 +13,6 @@ module;
 #include <dirent.h>
 #include <fcntl.h>
 #include <pwd.h>
-#include <signal.h>
 #include <spawn.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -34,7 +34,7 @@ auto kill_process(pid_t pid, int signal) -> Result<void> {
 }
 
 auto wait_for_process(pid_t pid) -> Result<ProcessInfo> {
-  int   status;
+  int   status = 0;
   pid_t result_pid = waitpid(pid, &status, 0);
   if (result_pid == -1) {
     return std::unexpected(errno);
@@ -58,7 +58,7 @@ auto spawn_process(
   }
   argv.push_back(nullptr);
 
-  pid_t pid;
+  pid_t pid = 0;
   if (int result = posix_spawnp(&pid, program.c_str(), file_actions, attr, argv.data(), env)) {
     return std::unexpected(result);
   }
@@ -74,7 +74,7 @@ auto close_fd(int fd) -> Result<void> {
 
 auto create_pipe() -> Result<std::array<int, 2>> {
   std::array<int, 2> fds;
-  if (pipe(fds.data()) == -1) {
+  if (pipe2(fds.data(), O_CLOEXEC) == -1) {
     return std::unexpected(errno);
   }
   return fds;
@@ -166,8 +166,8 @@ auto duplicate_fd(int fd) -> Result<int> {
   return new_fd;
 }
 
-auto duplicate_fd_to(int oldfd, int newfd) -> Result<void> {
-  if (dup2(oldfd, newfd) == -1) {
+auto duplicate_fd_to(int old_fd, int new_fd) -> Result<void> {
+  if (dup2(old_fd, new_fd) == -1) {
     return std::unexpected(errno);
   }
   return {};

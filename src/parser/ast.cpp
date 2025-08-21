@@ -3,11 +3,11 @@ module;
 #include <memory>
 #include <optional>
 
-module hsh.parser;
+module hsh.parser.ast;
 
 namespace hsh::parser {
 
-Word::Word(std::string_view text, lexer::TokenType kind)
+Word::Word(std::string_view text, lexer::Token::Type kind)
     : text_(text), token_kind_(kind) {}
 
 auto Word::type() const noexcept -> Type {
@@ -91,27 +91,6 @@ auto CompoundStatement::clone() const -> std::unique_ptr<ASTNode> {
   return compound;
 }
 
-CompoundStatementExecutable::CompoundStatementExecutable(std::unique_ptr<CompoundStatement> compound)
-    : compound_(std::move(compound)) {}
-
-auto CompoundStatementExecutable::clone() const -> std::unique_ptr<executor::ExecutableNode> {
-  auto cloned_compound = std::
-      unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(compound_->clone().release()));
-  return std::make_unique<CompoundStatementExecutable>(std::move(cloned_compound));
-}
-
-auto CompoundStatementExecutable::type_name() const noexcept -> std::string_view {
-  return "CompoundStatement";
-}
-
-auto CompoundStatementExecutable::get_compound() const -> CompoundStatement const& {
-  return *compound_;
-}
-
-auto CompoundStatement::as_executable() const -> executor::ExecutableNodePtr {
-  auto cloned = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(clone().release()));
-  return std::make_unique<CompoundStatementExecutable>(std::move(cloned));
-}
 
 auto ConditionalStatement::type() const noexcept -> Type {
   return Type::ConditionalStatement;
@@ -156,6 +135,58 @@ auto LogicalExpression::type() const noexcept -> Type {
 
 auto LogicalExpression::clone() const -> std::unique_ptr<ASTNode> {
   return std::make_unique<LogicalExpression>(left_->clone(), operator_, right_->clone());
+}
+
+auto ConditionalStatement::clone() const -> std::unique_ptr<ASTNode> {
+  auto cond        = std::make_unique<ConditionalStatement>();
+  cond->condition_ = std::unique_ptr<Pipeline>(static_cast<Pipeline*>(condition_->clone().release()));
+  cond->then_body_ = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(then_body_->clone().release()));
+
+  for (auto const& [fst, snd] : elif_clauses_) {
+    cond->elif_clauses_.emplace_back(
+        std::unique_ptr<Pipeline>(static_cast<Pipeline*>(fst->clone().release())),
+        std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(snd->clone().release()))
+    );
+  }
+
+  if (else_body_) {
+    cond->else_body_ = std::
+        unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(else_body_->clone().release()));
+  }
+
+  return cond;
+}
+
+auto LoopStatement::clone() const -> std::unique_ptr<ASTNode> {
+  auto loop   = std::make_unique<LoopStatement>();
+  loop->kind_ = kind_;
+
+  if (variable_) {
+    loop->variable_ = std::unique_ptr<Word>(static_cast<Word*>(variable_->clone().release()));
+  }
+
+  for (auto const& item : items_) {
+    loop->items_.push_back(std::unique_ptr<Word>(static_cast<Word*>(item->clone().release())));
+  }
+
+  if (condition_) {
+    loop->condition_ = std::unique_ptr<Pipeline>(static_cast<Pipeline*>(condition_->clone().release()));
+  }
+
+  loop->body_ = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(body_->clone().release()));
+
+  return loop;
+}
+
+auto CaseStatement::clone() const -> std::unique_ptr<ASTNode> {
+  auto case_stmt         = std::make_unique<CaseStatement>();
+  case_stmt->expression_ = std::unique_ptr<Word>(static_cast<Word*>(expression_->clone().release()));
+
+  for (auto const& clause : clauses_) {
+    case_stmt->clauses_.push_back(clause->clone());
+  }
+
+  return case_stmt;
 }
 
 } // namespace hsh::parser

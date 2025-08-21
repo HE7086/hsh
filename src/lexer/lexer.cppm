@@ -9,79 +9,79 @@ import hsh.core;
 
 export namespace hsh::lexer {
 
-enum struct TokenType {
-  // End of input
-  EndOfFile,
-
-  // Whitespace and separators
-  NewLine,
-  Whitespace,
-
-  // Operators and punctuation
-  Pipe,         // |
-  Ampersand,    // &
-  Semicolon,    // ;
-  LeftParen,    // (
-  RightParen,   // )
-  LeftBrace,    // {
-  RightBrace,   // }
-  LeftBracket,  // [
-  RightBracket, // ]
-
-  // Redirection operators
-  Less,        // <
-  Greater,     // >
-  Append,      // >>
-  LessAnd,     // <&
-  GreaterAnd,  // >&
-  LessLess,    // <<
-  LessGreater, // <>
-  GreaterPipe, // >|
-
-  // Logical operators
-  AndAnd, // &&
-  OrOr,   // ||
-
-  // Background and process control
-  Background, // & (when used for background)
-
-  // Words and literals
-  Word,         // Unquoted word
-  SingleQuoted, // 'string'
-  DoubleQuoted, // "string"
-  DollarParen,  // $(...)
-  DollarBrace,  // ${...}
-  Backtick,     // `...`
-
-  // Numbers (for redirection file descriptors)
-  Number,
-
-  // Reserved words
-  If,
-  Then,
-  Else,
-  Elif,
-  Fi,
-  Case,
-  Esac,
-  For,
-  While,
-  Until,
-  Do,
-  Done,
-  Function,
-  In,
-
-  // Special tokens
-  Assignment, // name=value
-  Comment,    // # comment
-
-  // Error token for invalid input
-  Error,
-};
-
 struct Token {
-  TokenType        kind_;
+  enum struct Type {
+    // End of input
+    EndOfFile,
+
+    // Whitespace and separators
+    NewLine,
+    Whitespace,
+
+    // Operators and punctuation
+    Pipe,         // |
+    Ampersand,    // &
+    Semicolon,    // ;
+    LeftParen,    // (
+    RightParen,   // )
+    LeftBrace,    // {
+    RightBrace,   // }
+    LeftBracket,  // [
+    RightBracket, // ]
+
+    // Redirection operators
+    Less,        // <
+    Greater,     // >
+    Append,      // >>
+    LessAnd,     // <&
+    GreaterAnd,  // >&
+    LessLess,    // <<
+    LessGreater, // <>
+    GreaterPipe, // >|
+
+    // Logical operators
+    AndAnd, // &&
+    OrOr,   // ||
+
+    // Background and process control
+    Background, // & (when used for background)
+
+    // Words and literals
+    Word,         // Unquoted word
+    SingleQuoted, // 'string'
+    DoubleQuoted, // "string"
+    DollarParen,  // $(...)
+    DollarBrace,  // ${...}
+    Backtick,     // `...`
+
+    // Numbers (for redirection file descriptors)
+    Number,
+
+    // Reserved words
+    If,
+    Then,
+    Else,
+    Elif,
+    Fi,
+    Case,
+    Esac,
+    For,
+    While,
+    Until,
+    Do,
+    Done,
+    Function,
+    In,
+
+    // Special tokens
+    Assignment, // name=value
+    Comment,    // # comment
+
+    // Error token for invalid input
+    Error,
+  };
+
+  Type             kind_;
   std::string_view text_;
   size_t           line_   = 1;
   size_t           column_ = 1;
@@ -89,13 +89,12 @@ struct Token {
 
 class Lexer {
   std::optional<Token> cached_token_;
+  std::string_view     src_;
+  size_t               pos_    = 0;
+  size_t               line_   = 1;
+  size_t               column_ = 1;
 
 public:
-  std::string_view src_;
-  size_t           pos_    = 0;
-  size_t           line_   = 1;
-  size_t           column_ = 1;
-
   explicit Lexer(std::string_view src) noexcept;
 
   [[nodiscard]] auto next() noexcept -> Token;
@@ -106,8 +105,6 @@ public:
   [[nodiscard]] auto at_end() const noexcept -> bool;
 
 private:
-  friend class Parser;
-
   [[nodiscard]] auto tokenize_next() noexcept -> Token;
   [[nodiscard]] auto match_operator() noexcept -> std::optional<Token>;
   [[nodiscard]] auto match_word() noexcept -> std::optional<Token>;
@@ -121,10 +118,10 @@ private:
   [[nodiscard]] auto                  peek_char(size_t offset = 1) const noexcept -> char;
   [[nodiscard]] static constexpr auto is_word_char(char c) noexcept -> bool;
   [[nodiscard]] static constexpr auto is_operator_char(char c) noexcept -> bool;
-  [[nodiscard]] static constexpr auto classify_word(std::string_view word) noexcept -> TokenType;
+  [[nodiscard]] static constexpr auto classify_word(std::string_view word) noexcept -> Token::Type;
   void                                skip_whitespace() noexcept;
 
-  [[nodiscard]] auto make_token(TokenType kind, std::string_view text) const noexcept -> Token;
+  [[nodiscard]] auto make_token(Token::Type kind, std::string_view text) const noexcept -> Token;
 };
 
 } // namespace hsh::lexer

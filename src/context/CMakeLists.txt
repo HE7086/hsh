@@ -8,4 +8,4 @@ target_sources(hsh_context
     context.cpp
 )
 
-target_link_libraries(hsh_context PRIVATE hsh_common hsh_core hsh_job)
+target_link_libraries(hsh_context PRIVATE hsh_common hsh_core)

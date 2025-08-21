@@ -32,7 +32,7 @@ void Lexer::skip() noexcept {
   if (cached_token_) {
     cached_token_.reset();
   } else {
-    [[maybe_unused]] auto token = tokenize_next();
+    auto _ = tokenize_next();
   }
 }
 
@@ -48,7 +48,7 @@ auto Lexer::tokenize_next() noexcept -> Token {
   skip_whitespace();
 
   if (at_end()) {
-    return make_token(TokenType::EndOfFile, "");
+    return make_token(Token::Type::EndOfFile, "");
   }
 
   if (auto token = match_comment()) {
@@ -72,7 +72,7 @@ auto Lexer::tokenize_next() noexcept -> Token {
 
   auto start_pos = pos_;
   advance();
-  return make_token(TokenType::Error, src_.substr(start_pos, 1));
+  return make_token(Token::Type::Error, src_.substr(start_pos, 1));
 }
 
 auto Lexer::match_operator() noexcept -> std::optional<Token> {
@@ -82,35 +82,35 @@ auto Lexer::match_operator() noexcept -> std::optional<Token> {
   switch (c) {
     case '\n': {
       advance();
-      return make_token(TokenType::NewLine, src_.substr(start_pos, 1));
+      return make_token(Token::Type::NewLine, src_.substr(start_pos, 1));
     }
     case '|': {
       advance();
       if (current_char() == '|') {
         advance();
-        return make_token(TokenType::OrOr, src_.substr(start_pos, 2));
+        return make_token(Token::Type::OrOr, src_.substr(start_pos, 2));
       }
-      return make_token(TokenType::Pipe, src_.substr(start_pos, 1));
+      return make_token(Token::Type::Pipe, src_.substr(start_pos, 1));
     }
     case '&': {
       advance();
       if (current_char() == '&') {
         advance();
-        return make_token(TokenType::AndAnd, src_.substr(start_pos, 2));
+        return make_token(Token::Type::AndAnd, src_.substr(start_pos, 2));
       }
-      return make_token(TokenType::Ampersand, src_.substr(start_pos, 1));
+      return make_token(Token::Type::Ampersand, src_.substr(start_pos, 1));
     }
     case ';': {
       advance();
-      return make_token(TokenType::Semicolon, src_.substr(start_pos, 1));
+      return make_token(Token::Type::Semicolon, src_.substr(start_pos, 1));
     }
     case '(': {
       advance();
-      return make_token(TokenType::LeftParen, src_.substr(start_pos, 1));
+      return make_token(Token::Type::LeftParen, src_.substr(start_pos, 1));
     }
     case ')': {
       advance();
-      return make_token(TokenType::RightParen, src_.substr(start_pos, 1));
+      return make_token(Token::Type::RightParen, src_.substr(start_pos, 1));
     }
     case '{': {
       if (start_pos > 0) {
@@ -140,51 +140,51 @@ auto Lexer::match_operator() noexcept -> std::optional<Token> {
       }
 
       advance();
-      return make_token(TokenType::LeftBrace, src_.substr(start_pos, 1));
+      return make_token(Token::Type::LeftBrace, src_.substr(start_pos, 1));
     }
     case '}': {
       advance();
-      return make_token(TokenType::RightBrace, src_.substr(start_pos, 1));
+      return make_token(Token::Type::RightBrace, src_.substr(start_pos, 1));
     }
     case '[': {
       advance();
-      return make_token(TokenType::LeftBracket, src_.substr(start_pos, 1));
+      return make_token(Token::Type::LeftBracket, src_.substr(start_pos, 1));
     }
     case ']': {
       advance();
-      return make_token(TokenType::RightBracket, src_.substr(start_pos, 1));
+      return make_token(Token::Type::RightBracket, src_.substr(start_pos, 1));
     }
     case '<': {
       advance();
       if (current_char() == '<') {
         advance();
-        return make_token(TokenType::LessLess, src_.substr(start_pos, 2));
+        return make_token(Token::Type::LessLess, src_.substr(start_pos, 2));
       }
       if (current_char() == '&') {
         advance();
-        return make_token(TokenType::LessAnd, src_.substr(start_pos, 2));
+        return make_token(Token::Type::LessAnd, src_.substr(start_pos, 2));
       }
       if (current_char() == '>') {
         advance();
-        return make_token(TokenType::LessGreater, src_.substr(start_pos, 2));
+        return make_token(Token::Type::LessGreater, src_.substr(start_pos, 2));
       }
-      return make_token(TokenType::Less, src_.substr(start_pos, 1));
+      return make_token(Token::Type::Less, src_.substr(start_pos, 1));
     }
     case '>': {
       advance();
       if (current_char() == '>') {
         advance();
-        return make_token(TokenType::Append, src_.substr(start_pos, 2));
+        return make_token(Token::Type::Append, src_.substr(start_pos, 2));
       }
       if (current_char() == '&') {
         advance();
-        return make_token(TokenType::GreaterAnd, src_.substr(start_pos, 2));
+        return make_token(Token::Type::GreaterAnd, src_.substr(start_pos, 2));
       }
       if (current_char() == '|') {
         advance();
-        return make_token(TokenType::GreaterPipe, src_.substr(start_pos, 2));
+        return make_token(Token::Type::GreaterPipe, src_.substr(start_pos, 2));
       }
-      return make_token(TokenType::Greater, src_.substr(start_pos, 1));
+      return make_token(Token::Type::Greater, src_.substr(start_pos, 1));
     }
     default: {
       return std::nullopt;
@@ -195,8 +195,7 @@ auto Lexer::match_operator() noexcept -> std::optional<Token> {
 auto Lexer::match_word() noexcept -> std::optional<Token> {
   auto start_pos = pos_;
 
-  char first_char = current_char();
-  if (!is_word_char(first_char) && !core::locale::is_alpha_u(first_char) && first_char != '{') {
+  if (char c = current_char(); !is_word_char(c) && !core::locale::is_alpha_u(c) && c != '{') {
     return std::nullopt;
   }
 
@@ -204,7 +203,6 @@ auto Lexer::match_word() noexcept -> std::optional<Token> {
 
   while (!at_end()) {
     char c = current_char();
-
     if (c == '{') {
       brace_depth++;
       advance();
@@ -240,13 +238,13 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
   char c         = current_char();
   auto start_pos = pos_;
 
-  if (c == '$' && (core::locale::is_alpha_u(peek_char()))) {
+  if (c == '$' && core::locale::is_alpha_u(peek_char())) {
     // $VAR
     advance();
     while (!at_end() && core::locale::is_alnum_u(current_char())) {
       advance();
     }
-    return make_token(TokenType::Word, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::Word, src_.substr(start_pos, pos_ - start_pos));
   }
 
   if (c == '\'') {
@@ -258,7 +256,7 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
     if (!at_end()) {
       advance();
     }
-    return make_token(TokenType::SingleQuoted, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::SingleQuoted, src_.substr(start_pos, pos_ - start_pos));
   }
 
   if (c == '"') {
@@ -277,7 +275,7 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
     if (!at_end()) {
       advance();
     }
-    return make_token(TokenType::DoubleQuoted, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::DoubleQuoted, src_.substr(start_pos, pos_ - start_pos));
   }
 
   if (c == '`') {
@@ -296,7 +294,7 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
     if (!at_end()) {
       advance();
     }
-    return make_token(TokenType::Backtick, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::Backtick, src_.substr(start_pos, pos_ - start_pos));
   }
 
   if (c == '$' && peek_char() == '(') {
@@ -313,7 +311,7 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
       }
       advance();
     }
-    return make_token(TokenType::DollarParen, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::DollarParen, src_.substr(start_pos, pos_ - start_pos));
   }
 
   if (c == '$' && peek_char() == '{') {
@@ -330,7 +328,7 @@ auto Lexer::match_quoted_string() noexcept -> std::optional<Token> {
       }
       advance();
     }
-    return make_token(TokenType::DollarBrace, src_.substr(start_pos, pos_ - start_pos));
+    return make_token(Token::Type::DollarBrace, src_.substr(start_pos, pos_ - start_pos));
   }
 
   return std::nullopt;
@@ -346,7 +344,7 @@ auto Lexer::match_number() noexcept -> std::optional<Token> {
     advance();
   }
 
-  return make_token(TokenType::Number, src_.substr(start_pos, pos_ - start_pos));
+  return make_token(Token::Type::Number, src_.substr(start_pos, pos_ - start_pos));
 }
 
 auto Lexer::match_comment() noexcept -> std::optional<Token> {
@@ -359,7 +357,7 @@ auto Lexer::match_comment() noexcept -> std::optional<Token> {
     advance();
   }
 
-  return make_token(TokenType::Comment, src_.substr(start_pos, pos_ - start_pos));
+  return make_token(Token::Type::Comment, src_.substr(start_pos, pos_ - start_pos));
 }
 
 auto Lexer::match_assignment() noexcept -> std::optional<Token> {
@@ -407,7 +405,7 @@ auto Lexer::match_assignment() noexcept -> std::optional<Token> {
     }
   }
 
-  return make_token(TokenType::Assignment, src_.substr(start_pos, pos_ - start_pos));
+  return make_token(Token::Type::Assignment, src_.substr(start_pos, pos_ - start_pos));
 }
 
 void Lexer::advance(size_t count) noexcept {
@@ -466,51 +464,51 @@ constexpr auto Lexer::is_operator_char(char c) noexcept -> bool {
          c == '\t';
 }
 
-constexpr auto Lexer::classify_word(std::string_view word) noexcept -> TokenType {
+constexpr auto Lexer::classify_word(std::string_view word) noexcept -> Token::Type {
   if (word == "if") {
-    return TokenType::If;
+    return Token::Type::If;
   }
   if (word == "then") {
-    return TokenType::Then;
+    return Token::Type::Then;
   }
   if (word == "else") {
-    return TokenType::Else;
+    return Token::Type::Else;
   }
   if (word == "elif") {
-    return TokenType::Elif;
+    return Token::Type::Elif;
   }
   if (word == "fi") {
-    return TokenType::Fi;
+    return Token::Type::Fi;
   }
   if (word == "case") {
-    return TokenType::Case;
+    return Token::Type::Case;
   }
   if (word == "esac") {
-    return TokenType::Esac;
+    return Token::Type::Esac;
   }
   if (word == "for") {
-    return TokenType::For;
+    return Token::Type::For;
   }
   if (word == "while") {
-    return TokenType::While;
+    return Token::Type::While;
   }
   if (word == "until") {
-    return TokenType::Until;
+    return Token::Type::Until;
   }
   if (word == "do") {
-    return TokenType::Do;
+    return Token::Type::Do;
   }
   if (word == "done") {
-    return TokenType::Done;
+    return Token::Type::Done;
   }
   if (word == "function") {
-    return TokenType::Function;
+    return Token::Type::Function;
   }
   if (word == "in") {
-    return TokenType::In;
+    return Token::Type::In;
   }
 
-  return TokenType::Word;
+  return Token::Type::Word;
 }
 
 void Lexer::skip_whitespace() noexcept {
@@ -519,26 +517,25 @@ void Lexer::skip_whitespace() noexcept {
   }
 }
 
-auto Lexer::make_token(TokenType kind, std::string_view text) const noexcept -> Token {
-  size_t token_line   = line_;
-  size_t token_column = column_;
+auto Lexer::make_token(Token::Type kind, std::string_view text) const noexcept -> Token {
+  size_t line   = line_;
+  size_t column = column_;
 
   for (size_t i = text.size(); i > 0; --i) {
-    size_t idx = text.size() - i;
-    if (text[idx] == '\n') {
-      token_line   = line_ - 1;
-      token_column = 1;
-      for (size_t j = idx + 1; j < text.size(); ++j) {
-        token_column++;
+    if (text[text.size() - i] == '\n') {
+      line   = line_ - 1;
+      column = 1;
+      for (size_t j = text.size() - i + 1; j < text.size(); ++j) {
+        column++;
       }
       break;
     }
     if (i == text.size()) {
-      token_column = column_ - text.size();
+      column = column_ - text.size();
     }
   }
 
-  return Token{kind, text, token_line, token_column};
+  return Token{kind, text, line, column};
 }
 
 } // namespace hsh::lexer

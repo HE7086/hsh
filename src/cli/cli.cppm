@@ -20,6 +20,43 @@ concept ArgType = std::convertible_to<T, std::string> || requires(T t, char cons
   std::from_chars(ptr, end, t);
 };
 
+class Option;
+class Arguments;
+
+class ArgumentParser {
+  std::string         name_;
+  std::string         desc_;
+  std::vector<Option> options_;
+
+public:
+  explicit ArgumentParser(std::string name = "", std::string desc = "") noexcept;
+
+  auto parse(int argc, char const** argv) -> core::Result<Arguments>;
+  auto add_argument(std::string name, std::string short_name = "") noexcept -> Option&;
+  void print_help() const noexcept;
+
+  static void print_version() noexcept;
+};
+
+auto create_default_arg_parser() -> ArgumentParser;
+
+class Option {
+  std::string                             name_;
+  std::string                             short_name_;
+  std::string                             description_;
+  std::optional<std::vector<std::string>> default_value_;
+  size_t                                  nargs_ = 0;
+
+public:
+  Option(std::string name, std::string short_name) noexcept;
+
+  auto desc(std::string desc) noexcept -> Option&;
+  auto default_value(std::string value) noexcept -> Option&;
+  auto nargs(size_t n) noexcept -> Option&;
+
+  friend class ArgumentParser;
+};
+
 class Arguments {
   std::unordered_map<std::string, std::vector<std::string>> args_;
 
@@ -63,39 +100,5 @@ public:
 
   friend class ArgumentParser;
 };
-
-class Option {
-  std::string                             name_;
-  std::string                             short_name_;
-  std::string                             description_;
-  std::optional<std::vector<std::string>> default_value_;
-  size_t                                  nargs_ = 0;
-
-public:
-  Option(std::string name, std::string short_name) noexcept;
-
-  auto desc(std::string desc) noexcept -> Option&;
-  auto default_value(std::string value) noexcept -> Option&;
-  auto nargs(size_t n) noexcept -> Option&;
-
-  friend class ArgumentParser;
-};
-
-class ArgumentParser {
-  std::string         name_;
-  std::string         desc_;
-  std::vector<Option> options_;
-
-public:
-  explicit ArgumentParser(std::string name = "", std::string desc = "") noexcept;
-
-  auto parse(int argc, char const** argv) -> core::Result<Arguments>;
-  auto add_argument(std::string name, std::string short_name = "") noexcept -> Option&;
-  void print_help() const noexcept;
-
-  static void print_version() noexcept;
-};
-
-auto create_default_arg_parser() -> ArgumentParser;
 
 } // namespace hsh::cli

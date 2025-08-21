@@ -21,10 +21,10 @@ add_executable(hsh_test EXCLUDE_FROM_ALL
   lexer/TEST_lexer.cpp
   parser/TEST_parser.cpp
   parser/TEST_subshell_parser.cpp
-  process/TEST_pipeline.cpp
-  shell/TEST_command_runner.cpp
+  shell/TEST_runner.cpp
   shell/TEST_subshell_execution.cpp
   builtin/TEST_builtin.cpp
+  core/TEST_signal.cpp
 )
 
 target_link_libraries(hsh_test PRIVATE hsh::lib)

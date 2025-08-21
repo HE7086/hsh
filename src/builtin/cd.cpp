@@ -13,7 +13,7 @@ import hsh.context;
 
 namespace hsh::builtin {
 
-auto builtin_cd(std::span<std::string const> args, context::Context& context) -> int {
+auto builtin_cd(std::span<std::string const> args, context::Context& context, job::JobManager&) -> int {
   std::string target_dir;
 
   if (args.empty()) {

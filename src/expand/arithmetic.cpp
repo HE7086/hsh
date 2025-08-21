@@ -682,7 +682,7 @@ auto ArithmeticExpression::is_integer(ArithmeticValue const& value) noexcept -> 
 }
 
 auto ArithmeticExpression::resolve_variable(std::string const& name) const -> ArithmeticResult {
-  auto var_value = context_.get_variable(name);
+  auto var_value = context_.get().get_variable(name);
   if (!var_value) {
     return 0LL;
   }

@@ -63,9 +63,9 @@ TEST_F(ParserTest, QuotedArguments) {
   ASSERT_EQ(command->words_.size(), 3);
   EXPECT_EQ(command->words_[0]->text_, "echo");
   EXPECT_EQ(command->words_[1]->text_, "'hello world'");
-  EXPECT_EQ(command->words_[1]->token_kind_, lexer::TokenType::SingleQuoted);
+  EXPECT_EQ(command->words_[1]->token_kind_, lexer::Token::Type::SingleQuoted);
   EXPECT_EQ(command->words_[2]->text_, "\"another string\"");
-  EXPECT_EQ(command->words_[2]->token_kind_, lexer::TokenType::DoubleQuoted);
+  EXPECT_EQ(command->words_[2]->token_kind_, lexer::Token::Type::DoubleQuoted);
 }
 
 TEST_F(ParserTest, VariableExpansion) {
@@ -87,9 +87,9 @@ TEST_F(ParserTest, CommandSubstitution) {
   ASSERT_EQ(command->words_.size(), 3);
   EXPECT_EQ(command->words_[0]->text_, "echo");
   EXPECT_EQ(command->words_[1]->text_, "$(date)");
-  EXPECT_EQ(command->words_[1]->token_kind_, lexer::TokenType::DollarParen);
+  EXPECT_EQ(command->words_[1]->token_kind_, lexer::Token::Type::DollarParen);
   EXPECT_EQ(command->words_[2]->text_, "`whoami`");
-  EXPECT_EQ(command->words_[2]->token_kind_, lexer::TokenType::Backtick);
+  EXPECT_EQ(command->words_[2]->token_kind_, lexer::Token::Type::Backtick);
 }
 
 TEST_F(ParserTest, SimpleRedirection) {
@@ -602,7 +602,7 @@ TEST_F(ParserTest, NestedQuotesInCommands) {
   ASSERT_EQ(command->words_.size(), 2);
   EXPECT_EQ(command->words_[0]->text_, "echo");
   EXPECT_EQ(command->words_[1]->text_, R"("He said 'hello world' to me")");
-  EXPECT_EQ(command->words_[1]->token_kind_, lexer::TokenType::DoubleQuoted);
+  EXPECT_EQ(command->words_[1]->token_kind_, lexer::Token::Type::DoubleQuoted);
 }
 
 TEST_F(ParserTest, MultipleConsecutiveRedirections) {
@@ -734,11 +734,11 @@ TEST_F(ParserTest, ComplexVariableExpansions) {
   EXPECT_EQ(command->words_[0]->text_, "echo");
   EXPECT_EQ(command->words_[1]->text_, "$HOME");
   EXPECT_EQ(command->words_[2]->text_, "${USER}");
-  EXPECT_EQ(command->words_[2]->token_kind_, lexer::TokenType::DollarBrace);
+  EXPECT_EQ(command->words_[2]->token_kind_, lexer::Token::Type::DollarBrace);
   EXPECT_EQ(command->words_[3]->text_, "${PATH:-/usr/bin}");
-  EXPECT_EQ(command->words_[3]->token_kind_, lexer::TokenType::DollarBrace);
+  EXPECT_EQ(command->words_[3]->token_kind_, lexer::Token::Type::DollarBrace);
   EXPECT_EQ(command->words_[4]->text_, "$(date)");
-  EXPECT_EQ(command->words_[4]->token_kind_, lexer::TokenType::DollarParen);
+  EXPECT_EQ(command->words_[4]->token_kind_, lexer::Token::Type::DollarParen);
 }
 
 TEST_F(ParserTest, LongPipeline) {

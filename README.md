@@ -76,3 +76,4 @@ Note: although most basic functionalities are working, they are not well tested 
 * tab completion
 * advanced prompt
 * and more...
+* core::result

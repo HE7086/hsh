@@ -5,13 +5,19 @@ target_sources(hsh_core
     FILE_SET cxx_modules TYPE CXX_MODULES FILES
       core.cppm
       constant.cppm
-      syscall.cppm
+      env.cppm
       file_descriptor.cppm
+      locale.cppm
+      result.cppm
+        signal.cppm
+      syscall.cppm
+      util.cppm
   PRIVATE
-    locale.cpp
-    environment.cpp
-    syscall.cpp
+    env.cpp
     file_descriptor.cpp
+    locale.cpp
+        signal.cpp
+    syscall.cpp
 )
 
 target_link_libraries(hsh_core PRIVATE hsh_common)

@@ -10,12 +10,32 @@ module;
 
 module hsh.shell.app;
 
-import hsh.parser;
+import hsh.shell.prompt;
+import hsh.shell.runner;
 import hsh.core;
-import hsh.process;
+import hsh.cli;
 import hsh.builtin;
+import hsh.parser;
 
 namespace hsh::shell {
+
+namespace {
+
+auto print_ast(std::string_view line) -> void {
+  if (auto ast = parser::Parser(line).parse()) {
+    parser::ASTPrinter().print(*ast.value());
+  }
+}
+
+auto read_lines() -> std::generator<std::string> {
+  // TODO: non-blocking readline
+  std::string line;
+  while (std::getline(std::cin, line)) {
+    co_yield line;
+  }
+}
+
+} // namespace
 
 auto App::run(int argc, char const** argv) -> int {
   auto parser = cli::create_default_arg_parser();
@@ -68,13 +88,15 @@ auto App::initialize_shell(int argc, char const** argv) -> void {
 
   builtin::register_all_builtins();
   if (is_interactive_) {
-    process::install_signal_handlers();
+    if (auto result = core::SignalManager::instance().install_handlers(); !result) {
+      std::println(stderr, "Warning: Failed to install signal handlers");
+    }
   }
 }
 
 auto App::run_interactive() -> int {
   if (is_interactive_) {
-    command_runner_.check_background_jobs();
+    runner_.check_background_jobs();
     print_prompt();
   }
 
@@ -85,7 +107,7 @@ auto App::run_interactive() -> int {
 
     if (line.empty()) {
       if (is_interactive_) {
-        command_runner_.check_background_jobs();
+        runner_.check_background_jobs();
         print_prompt();
       }
       continue;
@@ -95,12 +117,12 @@ auto App::run_interactive() -> int {
       break;
     }
 
-    if (auto exec_result = command_runner_.execute_command(line); !exec_result.success_) {
+    if (auto exec_result = runner_.run(line); !exec_result.success_) {
       std::println(stderr, "Error: {}", exec_result.error_message_);
     }
 
     if (is_interactive_) {
-      command_runner_.check_background_jobs();
+      runner_.check_background_jobs();
       print_prompt();
     }
   }
@@ -117,7 +139,7 @@ auto App::run_command(std::string_view command) -> int {
     print_ast(command);
   }
 
-  if (auto exec_result = command_runner_.execute_command(command); !exec_result.success_) {
+  if (auto exec_result = runner_.run(command); !exec_result.success_) {
     std::println(stderr, "Error: {}", exec_result.error_message_);
     return 1;
   }
@@ -128,22 +150,6 @@ auto App::run_command(std::string_view command) -> int {
 auto App::print_prompt() -> void {
   if (is_interactive_) {
     std::print(stderr, "{}", build_prompt(context_));
-  }
-}
-
-auto App::print_ast(std::string_view line) -> void {
-  auto ast = parser::Parser(line).parse();
-  auto p   = parser::ASTPrinter();
-  if (ast.has_value()) {
-    p.print(*ast.value());
-  }
-}
-
-auto App::read_lines() -> std::generator<std::string> {
-  // TODO: non-blocking readline
-  std::string line;
-  while (std::getline(std::cin, line)) {
-    co_yield line;
   }
 }
 

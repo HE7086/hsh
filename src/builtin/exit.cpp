@@ -12,7 +12,7 @@ import hsh.context;
 
 namespace hsh::builtin {
 
-auto builtin_exit(std::span<std::string const> args, context::Context& context) -> int {
+auto builtin_exit(std::span<std::string const> args, context::Context& context, job::JobManager&) -> int {
   int exit_code = context.get_exit_status();
 
   if (!args.empty()) {

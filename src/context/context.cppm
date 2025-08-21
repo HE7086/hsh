@@ -10,7 +10,6 @@ module;
 export module hsh.context;
 
 import hsh.core;
-import hsh.job;
 
 export namespace hsh::context {
 
@@ -24,20 +23,15 @@ class Context {
 
   // Special parameters
   std::vector<std::string> positional_parameters_;
-  std::string              script_name_ = "hsh";
+  std::string              script_name_ = core::constant::EXE_NAME;
   int                      shell_pid_   = 0;
   int                      last_bg_pid_ = 0;
   int                      exit_status_ = 0;
 
   std::unordered_map<std::string, std::string> special_param_cache_;
 
-  // Job manager reference
-  job::JobManager* job_manager_ = nullptr;
-
 public:
-  Context() = default;
-  explicit Context(job::JobManager& job_manager)
-      : job_manager_(&job_manager) {}
+  Context()  = default;
   ~Context() = default;
 
   Context(Context const&)            = delete;
@@ -96,19 +90,20 @@ public:
   auto create_scope() const -> Context;
   void merge_scope(Context const& scope);
 
-  // === Job Manager ===
-  auto get_job_manager() const noexcept -> job::JobManager*;
-  void set_job_manager(job::JobManager& job_manager);
-
 private:
   void refresh_pwd_cache();
   void refresh_user_cache();
   void refresh_host_cache();
 };
 
+// TODO typename CharT
 template<typename N, typename V>
 void Context::set_variable(N&& name, V&& value) {
-  local_variables_.insert_or_assign(std::forward<N>(name), std::forward<V>(value));
+  if constexpr (std::is_same_v<std::decay_t<N>, std::string_view>) {
+    local_variables_.insert_or_assign(std::string{std::forward<N>(name)}, std::forward<V>(value));
+  } else {
+    local_variables_.insert_or_assign(std::forward<N>(name), std::forward<V>(value));
+  }
 }
 
 template<typename N, typename V>

@@ -24,11 +24,14 @@ auto Registry::is_builtin(std::string const& name) const -> bool {
   return builtins_.contains(name);
 }
 
-auto
-Registry::execute_builtin(std::string const& name, std::span<std::string const> args, context::Context& context) const
-    -> int {
+auto Registry::execute_builtin(
+    std::string const&           name,
+    std::span<std::string const> args,
+    context::Context&            context,
+    job::JobManager&             job_manager
+) const -> int {
   if (auto it = builtins_.find(name); it != builtins_.end()) {
-    return it->second(args, context);
+    return it->second(args, context, job_manager);
   }
   return 127;
 }

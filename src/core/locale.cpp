@@ -2,7 +2,9 @@ module;
 
 #include <locale>
 
-module hsh.core;
+module hsh.core.locale;
+
+import hsh.core.constant;
 
 namespace hsh::core::locale {
 

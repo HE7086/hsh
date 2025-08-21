@@ -1,8 +1,9 @@
 module;
 
 #include <format>
+#include <string>
 
-module hsh.shell;
+module hsh.shell.prompt;
 
 import hsh.core;
 import hsh.context;

@@ -4,7 +4,7 @@ module;
 #include <print>
 #include <string>
 
-module hsh.parser;
+module hsh.parser.printer;
 
 namespace hsh::parser {
 

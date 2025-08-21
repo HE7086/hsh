@@ -15,7 +15,7 @@ import hsh.core;
 
 namespace hsh::builtin {
 
-auto builtin_pwd(std::span<std::string const> args, context::Context& context) -> int {
+auto builtin_pwd(std::span<std::string const> args, context::Context& context, job::JobManager&) -> int {
   if (!args.empty()) {
     std::println(stderr, "pwd: too many arguments");
     return 1;

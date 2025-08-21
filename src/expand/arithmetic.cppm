@@ -1,5 +1,6 @@
 module;
 
+#include <expected>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -12,7 +13,7 @@ import hsh.context;
 export namespace hsh::expand::arithmetic {
 
 using ArithmeticValue  = std::variant<int64_t, double>;
-using ArithmeticResult = core::Result<ArithmeticValue, std::string>;
+using ArithmeticResult = std::expected<ArithmeticValue, std::string>;
 
 enum struct TokenType {
   Number,       // Integer or floating point literal
@@ -55,17 +56,17 @@ struct ArithmeticToken {
 };
 
 class ArithmeticExpression {
+  std::string_view                         expression_;
+  size_t                                   position_;
+  ArithmeticToken                          current_token_;
+  std::reference_wrapper<context::Context> context_;
+
 public:
   ArithmeticExpression(std::string_view expr, context::Context& ctx);
 
   auto evaluate() -> ArithmeticResult;
 
 private:
-  std::string_view  expression_;
-  size_t            position_;
-  ArithmeticToken   current_token_;
-  context::Context& context_;
-
   void               advance();
   auto               next_token() -> ArithmeticToken;
   auto               parse_number(size_t start) -> ArithmeticToken;
@@ -96,7 +97,7 @@ private:
   [[nodiscard]] auto to_double(ArithmeticValue const& value) const noexcept -> double;
   static auto        is_integer(ArithmeticValue const& value) noexcept -> bool;
 
-  auto resolve_variable(std::string const& name) const -> ArithmeticResult;
+  [[nodiscard]] auto resolve_variable(std::string const& name) const -> ArithmeticResult;
 
   [[nodiscard]] auto make_error(std::string_view message) const -> std::string;
 };

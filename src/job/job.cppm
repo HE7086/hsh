@@ -31,12 +31,15 @@ class JobManager {
   int              next_job_id_ = 1;
 
 public:
-  auto               add_job(pid_t pid, std::string const& command) -> int;
-  void               remove_job(pid_t pid);
-  void               update_job_status(pid_t pid, JobStatus status);
-  auto               check_background_jobs() -> std::vector<Job>;
-  auto               process_completed_pid(pid_t pid) -> std::optional<Job>;
-  [[nodiscard]] auto get_jobs() const -> std::vector<Job> const&;
+  auto add_job(pid_t pid, std::string const& command) -> int;
+  void remove_job(pid_t pid);
+  void update_job_status(pid_t pid, JobStatus status);
+  auto check_background_jobs() -> std::vector<Job>;
+  auto process_completed_pid(pid_t pid) -> std::optional<Job>;
+
+  auto get_jobs(this auto&& self) -> decltype(auto) {
+    return self.jobs_;
+  }
 };
 
 } // namespace hsh::job

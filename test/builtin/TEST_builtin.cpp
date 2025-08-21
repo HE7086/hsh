@@ -5,6 +5,7 @@
 
 import hsh.builtin;
 import hsh.context;
+import hsh.job;
 
 namespace {
 
@@ -12,60 +13,62 @@ class BuiltinTest : public ::testing::Test {
 protected:
   void SetUp() override {
     context_ = std::make_unique<hsh::context::Context>();
+    job_manager_ = std::make_unique<hsh::job::JobManager>();
     hsh::builtin::register_all_builtins();
   }
 
   std::unique_ptr<hsh::context::Context> context_;
+  std::unique_ptr<hsh::job::JobManager> job_manager_;
 };
 
 // PWD Tests
 TEST_F(BuiltinTest, PwdNoArguments) {
   std::vector<std::string> args{};
-  auto                     result = hsh::builtin::builtin_pwd(args, *context_);
+  auto                     result = hsh::builtin::builtin_pwd(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, PwdTooManyArguments) {
   std::vector<std::string> args{"extra", "arguments"};
-  auto                     result = hsh::builtin::builtin_pwd(args, *context_);
+  auto                     result = hsh::builtin::builtin_pwd(args, *context_, *job_manager_);
   EXPECT_EQ(result, 1);
 }
 
 // Echo Tests
 TEST_F(BuiltinTest, EchoNoArguments) {
   std::vector<std::string> args{};
-  auto                     result = hsh::builtin::builtin_echo(args, *context_);
+  auto                     result = hsh::builtin::builtin_echo(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, EchoSingleArgument) {
   std::vector<std::string> args{"hello"};
-  auto                     result = hsh::builtin::builtin_echo(args, *context_);
+  auto                     result = hsh::builtin::builtin_echo(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, EchoMultipleArguments) {
   std::vector<std::string> args{"hello", "world", "test"};
-  auto                     result = hsh::builtin::builtin_echo(args, *context_);
+  auto                     result = hsh::builtin::builtin_echo(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, EchoWithNoNewlineFlag) {
   std::vector<std::string> args{"-n", "hello", "world"};
-  auto                     result = hsh::builtin::builtin_echo(args, *context_);
+  auto                     result = hsh::builtin::builtin_echo(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 // Export Tests
 TEST_F(BuiltinTest, ExportNoArguments) {
   std::vector<std::string> args{};
-  auto                     result = hsh::builtin::builtin_export(args, *context_);
+  auto                     result = hsh::builtin::builtin_export(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, ExportVariableAssignment) {
   std::vector<std::string> args{"TEST_VAR=hello"};
-  auto                     result = hsh::builtin::builtin_export(args, *context_);
+  auto                     result = hsh::builtin::builtin_export(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 
   // Check if variable was exported
@@ -80,19 +83,19 @@ TEST_F(BuiltinTest, ExportExistingVariable) {
 
   // Export it
   std::vector<std::string> args{"LOCAL_VAR"};
-  auto                     result = hsh::builtin::builtin_export(args, *context_);
+  auto                     result = hsh::builtin::builtin_export(args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 }
 
 TEST_F(BuiltinTest, ExportInvalidVariableName) {
   std::vector<std::string> args{"123invalid=value"};
-  auto                     result = hsh::builtin::builtin_export(args, *context_);
+  auto                     result = hsh::builtin::builtin_export(args, *context_, *job_manager_);
   EXPECT_EQ(result, 1);
 }
 
 TEST_F(BuiltinTest, ExportVariableNameWithSpecialChars) {
   std::vector<std::string> args{"invalid-name=value"};
-  auto                     result = hsh::builtin::builtin_export(args, *context_);
+  auto                     result = hsh::builtin::builtin_export(args, *context_, *job_manager_);
   EXPECT_EQ(result, 1);
 }
 
@@ -102,14 +105,14 @@ TEST_F(BuiltinTest, ExitNoArguments) {
   // Just test argument parsing
   std::vector<std::string> args{};
   // Note: This test would actually exit the program, so we skip it
-  // auto result = hsh::builtin::exit_builtin(args, *context_);
+  // auto result = hsh::builtin::exit_builtin(args, *context_, *job_manager_);
 }
 
 TEST_F(BuiltinTest, ExitTooManyArguments) {
   // This should return 1 before calling std::exit
   std::vector<std::string> args{"0", "extra"};
   // Note: This test would actually exit the program
-  // auto result = hsh::builtin::exit_builtin(args, *context_);
+  // auto result = hsh::builtin::exit_builtin(args, *context_, *job_manager_);
   // EXPECT_EQ(result, 1);
 }
 
@@ -130,11 +133,11 @@ TEST_F(BuiltinTest, RegistryExecuteBuiltin) {
   auto& registry = hsh::builtin::Registry::instance();
 
   std::vector<std::string> args{};
-  auto                     result = registry.execute_builtin("pwd", args, *context_);
+  auto                     result = registry.execute_builtin("pwd", args, *context_, *job_manager_);
   EXPECT_EQ(result, 0);
 
   // Test non-existent builtin
-  result = registry.execute_builtin("nonexistent", args, *context_);
+  result = registry.execute_builtin("nonexistent", args, *context_, *job_manager_);
   EXPECT_EQ(result, 127);
 }
 

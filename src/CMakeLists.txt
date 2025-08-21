@@ -5,10 +5,7 @@ add_subdirectory(cli)
 add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(expand)
-add_subdirectory(executor)
 add_subdirectory(job)
-add_subdirectory(process)
-add_subdirectory(compiler)
 add_subdirectory(shell)
 
 add_library(hsh_lib)
@@ -24,10 +21,7 @@ target_link_libraries(hsh_lib PUBLIC
   hsh_lexer
   hsh_parser
   hsh_expand
-  hsh_executor
   hsh_job
-  hsh_process
-  hsh_compiler
   hsh_shell
   hsh_builtin
 )
