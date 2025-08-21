@@ -22,6 +22,9 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -readability-convert-member-functions-to-static,
   -misc-const-correctness,
+  -misc-use-internal-linkage,
+  -cppcoreguidelines-special-member-functions,
+  -abseil-string-find-str-contains,
 
 CheckOptions:
   - key:             readability-identifier-naming.NamespaceCase

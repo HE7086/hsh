@@ -1,97 +1,161 @@
 module;
 
 #include <memory>
-#include <string>
-#include <string_view>
-#include <utility>
+#include <optional>
 
 module hsh.parser;
 
 namespace hsh::parser {
 
-RedirectionAST::RedirectionAST(RedirectionKind kind, std::string target, bool target_leading_quoted, int fd)
-    : target_(std::move(target)), fd_(fd), kind_(kind), target_leading_quoted_(target_leading_quoted) {}
+Word::Word(std::string_view text, lexer::TokenType kind)
+    : text_(text), token_kind_(kind) {}
 
-void SimpleCommandAST::add_arg(std::string arg, bool leading_quoted) {
-  args_.emplace_back(std::move(arg));
-  leading_quoted_args_.emplace_back(leading_quoted);
+auto Word::type() const noexcept -> Type {
+  return Type::Word;
 }
 
-void SimpleCommandAST::add_redirection(std::unique_ptr<RedirectionAST> redir) {
-  redirections_.push_back(std::move(redir));
+auto Word::clone() const -> std::unique_ptr<ASTNode> {
+  return std::make_unique<Word>(text_, token_kind_);
 }
 
-bool SimpleCommandAST::empty() const noexcept {
-  return args_.empty();
+auto Word::from_token(lexer::Token const& token) -> std::unique_ptr<Word> {
+  return std::make_unique<Word>(token.text_, token.kind_);
 }
 
-std::string_view SimpleCommandAST::command() const noexcept {
-  return args_.empty() ? std::string_view{} : args_[0];
+Assignment::Assignment(std::unique_ptr<Word> name, std::unique_ptr<Word> value)
+    : name_(std::move(name)), value_(std::move(value)) {}
+
+auto Assignment::type() const noexcept -> Type {
+  return Type::Assignment;
 }
 
-void PipelineAST::add_command(std::unique_ptr<SimpleCommandAST> cmd) {
-  commands_.push_back(std::move(cmd));
+auto Assignment::clone() const -> std::unique_ptr<ASTNode> {
+  return std::make_unique<Assignment>(
+      std::unique_ptr<Word>(static_cast<Word*>(name_->clone().release())),
+      std::unique_ptr<Word>(static_cast<Word*>(value_->clone().release()))
+  );
 }
 
-size_t PipelineAST::size() const noexcept {
-  return commands_.size();
+Redirection::Redirection(Kind kind, std::unique_ptr<Word> target, std::optional<int> fd)
+    : kind_(kind), fd_(fd), target_(std::move(target)) {}
+
+auto Redirection::type() const noexcept -> Type {
+  return Type::Redirection;
 }
 
-bool PipelineAST::empty() const noexcept {
-  return commands_.empty();
+auto Redirection::clone() const -> std::unique_ptr<ASTNode> {
+  return std::
+      make_unique<Redirection>(kind_, std::unique_ptr<Word>(static_cast<Word*>(target_->clone().release())), fd_);
 }
 
-AndOrAST::AndOrAST(std::unique_ptr<PipelineAST> left) noexcept
-    : left_(std::move(left)) {}
-
-void AndOrAST::add_and(std::unique_ptr<PipelineAST> right) {
-  continuations_.emplace_back(AndOrOperator::And, std::move(right));
+auto Command::type() const noexcept -> Type {
+  return Type::Command;
 }
 
-void AndOrAST::add_or(std::unique_ptr<PipelineAST> right) {
-  continuations_.emplace_back(AndOrOperator::Or, std::move(right));
+auto Command::clone() const -> std::unique_ptr<ASTNode> {
+  auto cmd = std::make_unique<Command>();
+  for (auto const& word : words_) {
+    cmd->words_.push_back(std::unique_ptr<Word>(static_cast<Word*>(word->clone().release())));
+  }
+  for (auto const& redir : redirections_) {
+    cmd->redirections_.push_back(std::unique_ptr<Redirection>(static_cast<Redirection*>(redir->clone().release())));
+  }
+  for (auto const& assign : assignments_) {
+    cmd->assignments_.push_back(std::unique_ptr<Assignment>(static_cast<Assignment*>(assign->clone().release())));
+  }
+  return cmd;
 }
 
-void AndOrAST::set_background(bool bg) noexcept {
-  background_ = bg;
+auto Pipeline::type() const noexcept -> Type {
+  return Type::Pipeline;
 }
 
-bool AndOrAST::is_background() const noexcept {
-  return background_;
+auto Pipeline::clone() const -> std::unique_ptr<ASTNode> {
+  auto pipeline         = std::make_unique<Pipeline>();
+  pipeline->background_ = background_;
+  for (auto const& cmd : commands_) {
+    pipeline->commands_.push_back(std::unique_ptr<Command>(static_cast<Command*>(cmd->clone().release())));
+  }
+  return pipeline;
 }
 
-bool AndOrAST::is_simple() const noexcept {
-  return continuations_.empty();
+auto CompoundStatement::type() const noexcept -> Type {
+  return Type::CompoundStatement;
 }
 
-void ListAST::add_command(std::unique_ptr<AndOrAST> cmd) {
-  commands_.push_back(std::move(cmd));
+auto CompoundStatement::clone() const -> std::unique_ptr<ASTNode> {
+  auto compound = std::make_unique<CompoundStatement>();
+  for (auto const& stmt : statements_) {
+    compound->statements_.push_back(stmt->clone());
+  }
+  return compound;
 }
 
-size_t ListAST::size() const noexcept {
-  return commands_.size();
+CompoundStatementExecutable::CompoundStatementExecutable(std::unique_ptr<CompoundStatement> compound)
+    : compound_(std::move(compound)) {}
+
+auto CompoundStatementExecutable::clone() const -> std::unique_ptr<core::ExecutableNode> {
+  auto cloned_compound = std::
+      unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(compound_->clone().release()));
+  return std::make_unique<CompoundStatementExecutable>(std::move(cloned_compound));
 }
 
-bool ListAST::empty() const noexcept {
-  return commands_.empty();
+auto CompoundStatementExecutable::type_name() const noexcept -> std::string_view {
+  return "CompoundStatement";
 }
 
-CompoundCommandAST::CompoundCommandAST(CompoundKind kind, std::unique_ptr<ListAST> body)
-    : kind_(kind), body_(std::move(body)) {}
-
-void CompoundCommandAST::add_redirection(std::unique_ptr<RedirectionAST> redir) {
-  redirections_.push_back(std::move(redir));
+auto CompoundStatementExecutable::get_compound() const -> CompoundStatement const& {
+  return *compound_;
 }
 
-ParseError::ParseError(std::string msg, size_t pos)
-    : message_(std::move(msg)), token_position_(pos) {}
-
-std::string const& ParseError::message() const noexcept {
-  return message_;
+auto CompoundStatement::as_executable() const -> core::ExecutableNodePtr {
+  auto cloned = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(clone().release()));
+  return std::make_unique<CompoundStatementExecutable>(std::move(cloned));
 }
 
-size_t ParseError::position() const noexcept {
-  return token_position_;
+auto ConditionalStatement::type() const noexcept -> Type {
+  return Type::ConditionalStatement;
+}
+
+auto LoopStatement::type() const noexcept -> Type {
+  return Type::LoopStatement;
+}
+
+auto CaseStatement::type() const noexcept -> Type {
+  return Type::CaseStatement;
+}
+
+auto CaseStatement::CaseClause::clone() const -> std::unique_ptr<CaseClause> {
+  auto clause = std::make_unique<CaseClause>();
+  for (auto const& pattern : patterns_) {
+    clause->patterns_.push_back(std::unique_ptr<Word>(static_cast<Word*>(pattern->clone().release())));
+  }
+  clause->body_ = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(body_->clone().release()));
+  return clause;
+}
+
+Subshell::Subshell(std::unique_ptr<CompoundStatement> body)
+    : body_(std::move(body)) {}
+
+auto Subshell::type() const noexcept -> Type {
+  return Type::Subshell;
+}
+
+auto Subshell::clone() const -> std::unique_ptr<ASTNode> {
+  return std::make_unique<Subshell>(
+      std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(body_->clone().release()))
+  );
+}
+
+LogicalExpression::LogicalExpression(std::unique_ptr<ASTNode> left, Operator op, std::unique_ptr<ASTNode> right)
+    : left_(std::move(left)), operator_(op), right_(std::move(right)) {}
+
+auto LogicalExpression::type() const noexcept -> Type {
+  return Type::LogicalExpression;
+}
+
+auto LogicalExpression::clone() const -> std::unique_ptr<ASTNode> {
+  return std::make_unique<LogicalExpression>(left_->clone(), operator_, right_->clone());
 }
 
 } // namespace hsh::parser

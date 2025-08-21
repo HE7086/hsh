@@ -5,21 +5,21 @@ alias r := run
 alias t := test
 
 configure:
-  cmake -B build -G "Ninja Multi-Config"
+  cmake -B build -G Ninja
 
 build: configure
-  cmake --build build --config Debug
+  cmake --build build
 
 test *ARGS: build
   cmake --build build --target hsh_test
-  ctest --test-dir build -C Debug --output-on-failure {{ARGS}}
+  ctest --test-dir build --output-on-failure {{ARGS}}
 
 run *ARGS: build
-  build/src/Debug/hsh {{ARGS}}
+  build/src/hsh {{ARGS}}
 
 debug *ARGS="": build
   #!/bin/bash
-  gdb "build/src/Debug/hsh" -ex "b main" {{ARGS}}
+  gdb "build/src/hsh" -ex "b main" {{ARGS}}
 
 fmt:
   find src -name '*.cpp*' -exec clang-format -i {} \;
