@@ -32,7 +32,7 @@ TEST_F(SubshellParserTest, SimpleSubshell) {
   ASSERT_NE(pipeline, nullptr);
   ASSERT_EQ(pipeline->commands_.size(), 1);
 
-  auto const& command = pipeline->commands_[0];
+  auto* command = static_cast<hsh::parser::Command*>(pipeline->commands_[0].get());
   ASSERT_EQ(command->words_.size(), 2);
   EXPECT_EQ(command->words_[0]->text_, "echo");
   EXPECT_EQ(command->words_[1]->text_, "hello");
@@ -53,15 +53,17 @@ TEST_F(SubshellParserTest, SubshellWithMultipleCommands) {
   auto* pipeline1 = dynamic_cast<hsh::parser::Pipeline*>(subshell->body_->statements_[0].get());
   ASSERT_NE(pipeline1, nullptr);
   ASSERT_EQ(pipeline1->commands_.size(), 1);
-  EXPECT_EQ(pipeline1->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(pipeline1->commands_[0]->words_[1]->text_, "hello");
+  auto* cmd1 = static_cast<hsh::parser::Command*>(pipeline1->commands_[0].get());
+  EXPECT_EQ(cmd1->words_[0]->text_, "echo");
+  EXPECT_EQ(cmd1->words_[1]->text_, "hello");
 
   // Check second command
   auto* pipeline2 = dynamic_cast<hsh::parser::Pipeline*>(subshell->body_->statements_[1].get());
   ASSERT_NE(pipeline2, nullptr);
   ASSERT_EQ(pipeline2->commands_.size(), 1);
-  EXPECT_EQ(pipeline2->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(pipeline2->commands_[0]->words_[1]->text_, "world");
+  auto* cmd2 = static_cast<hsh::parser::Command*>(pipeline2->commands_[0].get());
+  EXPECT_EQ(cmd2->words_[0]->text_, "echo");
+  EXPECT_EQ(cmd2->words_[1]->text_, "world");
 }
 
 TEST_F(SubshellParserTest, SubshellWithAssignments) {
@@ -85,8 +87,9 @@ TEST_F(SubshellParserTest, SubshellWithAssignments) {
   auto* pipeline = dynamic_cast<hsh::parser::Pipeline*>(subshell->body_->statements_[1].get());
   ASSERT_NE(pipeline, nullptr);
   ASSERT_EQ(pipeline->commands_.size(), 1);
-  EXPECT_EQ(pipeline->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(pipeline->commands_[0]->words_[1]->text_, "$VAR");
+  auto* cmd = static_cast<hsh::parser::Command*>(pipeline->commands_[0].get());
+  EXPECT_EQ(cmd->words_[0]->text_, "echo");
+  EXPECT_EQ(cmd->words_[1]->text_, "$VAR");
 }
 
 TEST_F(SubshellParserTest, EmptySubshell) {

@@ -174,14 +174,16 @@ TEST_F(ParserTest, SimplePipeline) {
   ASSERT_EQ(pipeline->commands_.size(), 2);
 
   // First command: cat file.txt
-  ASSERT_EQ(pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(pipeline->commands_[0]->words_[0]->text_, "cat");
-  EXPECT_EQ(pipeline->commands_[0]->words_[1]->text_, "file.txt");
+  auto* cmd0 = static_cast<Command*>(pipeline->commands_[0].get());
+  ASSERT_EQ(cmd0->words_.size(), 2);
+  EXPECT_EQ(cmd0->words_[0]->text_, "cat");
+  EXPECT_EQ(cmd0->words_[1]->text_, "file.txt");
 
   // Second command: grep pattern
-  ASSERT_EQ(pipeline->commands_[1]->words_.size(), 2);
-  EXPECT_EQ(pipeline->commands_[1]->words_[0]->text_, "grep");
-  EXPECT_EQ(pipeline->commands_[1]->words_[1]->text_, "pattern");
+  auto* cmd1 = static_cast<Command*>(pipeline->commands_[1].get());
+  ASSERT_EQ(cmd1->words_.size(), 2);
+  EXPECT_EQ(cmd1->words_[0]->text_, "grep");
+  EXPECT_EQ(cmd1->words_[1]->text_, "pattern");
 
   EXPECT_FALSE(pipeline->background_);
 }
@@ -193,9 +195,9 @@ TEST_F(ParserTest, ComplexPipeline) {
   auto pipeline = std::move(result.value());
   ASSERT_EQ(pipeline->commands_.size(), 3);
 
-  EXPECT_EQ(pipeline->commands_[0]->words_[0]->text_, "ps");
-  EXPECT_EQ(pipeline->commands_[1]->words_[0]->text_, "grep");
-  EXPECT_EQ(pipeline->commands_[2]->words_[0]->text_, "awk");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[0].get())->words_[0]->text_, "ps");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[1].get())->words_[0]->text_, "grep");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[2].get())->words_[0]->text_, "awk");
 }
 
 TEST_F(ParserTest, BackgroundPipeline) {
@@ -219,18 +221,20 @@ TEST_F(ParserTest, IfStatement) {
 
   // Check condition: test -f file
   ASSERT_EQ(conditional->condition_->commands_.size(), 1);
-  ASSERT_EQ(conditional->condition_->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(conditional->condition_->commands_[0]->words_[0]->text_, "test");
-  EXPECT_EQ(conditional->condition_->commands_[0]->words_[1]->text_, "-f");
-  EXPECT_EQ(conditional->condition_->commands_[0]->words_[2]->text_, "file");
+  auto* cond_cmd = static_cast<Command*>(conditional->condition_->commands_[0].get());
+  ASSERT_EQ(cond_cmd->words_.size(), 3);
+  EXPECT_EQ(cond_cmd->words_[0]->text_, "test");
+  EXPECT_EQ(cond_cmd->words_[1]->text_, "-f");
+  EXPECT_EQ(cond_cmd->words_[2]->text_, "file");
 
   // Check then body: echo exists
   ASSERT_EQ(conditional->then_body_->statements_.size(), 1);
   auto* then_pipeline = static_cast<Pipeline*>(conditional->then_body_->statements_[0].get());
   ASSERT_EQ(then_pipeline->commands_.size(), 1);
-  ASSERT_EQ(then_pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(then_pipeline->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(then_pipeline->commands_[0]->words_[1]->text_, "exists");
+  auto* then_cmd = static_cast<Command*>(then_pipeline->commands_[0].get());
+  ASSERT_EQ(then_cmd->words_.size(), 2);
+  EXPECT_EQ(then_cmd->words_[0]->text_, "echo");
+  EXPECT_EQ(then_cmd->words_[1]->text_, "exists");
 
   // No elif or else clauses
   EXPECT_EQ(conditional->elif_clauses_.size(), 0);
@@ -251,9 +255,10 @@ TEST_F(ParserTest, IfElseStatement) {
   ASSERT_EQ(conditional->else_body_->statements_.size(), 1);
   auto* else_pipeline = static_cast<Pipeline*>(conditional->else_body_->statements_[0].get());
   ASSERT_EQ(else_pipeline->commands_.size(), 1);
-  ASSERT_EQ(else_pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(else_pipeline->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(else_pipeline->commands_[0]->words_[1]->text_, "missing");
+  auto* else_cmd = static_cast<Command*>(else_pipeline->commands_[0].get());
+  ASSERT_EQ(else_cmd->words_.size(), 2);
+  EXPECT_EQ(else_cmd->words_[0]->text_, "echo");
+  EXPECT_EQ(else_cmd->words_[1]->text_, "missing");
 }
 
 TEST_F(ParserTest, ForLoop) {
@@ -281,9 +286,10 @@ TEST_F(ParserTest, ForLoop) {
   ASSERT_EQ(loop->body_->statements_.size(), 1);
   auto* body_pipeline = static_cast<Pipeline*>(loop->body_->statements_[0].get());
   ASSERT_EQ(body_pipeline->commands_.size(), 1);
-  ASSERT_EQ(body_pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[0]->text_, "echo");
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[1]->text_, "$i");
+  auto* body_cmd = static_cast<Command*>(body_pipeline->commands_[0].get());
+  ASSERT_EQ(body_cmd->words_.size(), 2);
+  EXPECT_EQ(body_cmd->words_[0]->text_, "echo");
+  EXPECT_EQ(body_cmd->words_[1]->text_, "$i");
 }
 
 TEST_F(ParserTest, WhileLoop) {
@@ -299,18 +305,20 @@ TEST_F(ParserTest, WhileLoop) {
   // Check condition: test -f lock
   ASSERT_TRUE(loop->condition_);
   ASSERT_EQ(loop->condition_->commands_.size(), 1);
-  ASSERT_EQ(loop->condition_->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[0]->text_, "test");
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[1]->text_, "-f");
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[2]->text_, "lock");
+  auto* cond_cmd = static_cast<Command*>(loop->condition_->commands_[0].get());
+  ASSERT_EQ(cond_cmd->words_.size(), 3);
+  EXPECT_EQ(cond_cmd->words_[0]->text_, "test");
+  EXPECT_EQ(cond_cmd->words_[1]->text_, "-f");
+  EXPECT_EQ(cond_cmd->words_[2]->text_, "lock");
 
   // Check body: sleep 1
   ASSERT_EQ(loop->body_->statements_.size(), 1);
   auto* body_pipeline = static_cast<Pipeline*>(loop->body_->statements_[0].get());
   ASSERT_EQ(body_pipeline->commands_.size(), 1);
-  ASSERT_EQ(body_pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[0]->text_, "sleep");
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[1]->text_, "1");
+  auto* body_cmd = static_cast<Command*>(body_pipeline->commands_[0].get());
+  ASSERT_EQ(body_cmd->words_.size(), 2);
+  EXPECT_EQ(body_cmd->words_[0]->text_, "sleep");
+  EXPECT_EQ(body_cmd->words_[1]->text_, "1");
 }
 
 TEST_F(ParserTest, MultipleStatements) {
@@ -323,17 +331,17 @@ TEST_F(ParserTest, MultipleStatements) {
   // First statement: echo hello
   auto* first_pipeline = static_cast<Pipeline*>(compound->statements_[0].get());
   ASSERT_EQ(first_pipeline->commands_.size(), 1);
-  EXPECT_EQ(first_pipeline->commands_[0]->words_[0]->text_, "echo");
+  EXPECT_EQ(static_cast<Command*>(first_pipeline->commands_[0].get())->words_[0]->text_, "echo");
 
   // Second statement: ls -la
   auto* second_pipeline = static_cast<Pipeline*>(compound->statements_[1].get());
   ASSERT_EQ(second_pipeline->commands_.size(), 1);
-  EXPECT_EQ(second_pipeline->commands_[0]->words_[0]->text_, "ls");
+  EXPECT_EQ(static_cast<Command*>(second_pipeline->commands_[0].get())->words_[0]->text_, "ls");
 
   // Third statement: pwd
   auto* third_pipeline = static_cast<Pipeline*>(compound->statements_[2].get());
   ASSERT_EQ(third_pipeline->commands_.size(), 1);
-  EXPECT_EQ(third_pipeline->commands_[0]->words_[0]->text_, "pwd");
+  EXPECT_EQ(static_cast<Command*>(third_pipeline->commands_[0].get())->words_[0]->text_, "pwd");
 }
 
 TEST_F(ParserTest, ComplexScript) {
@@ -449,18 +457,20 @@ TEST_F(ParserTest, UntilLoop) {
   // Check condition: test -f ready.flag
   ASSERT_TRUE(loop->condition_);
   ASSERT_EQ(loop->condition_->commands_.size(), 1);
-  ASSERT_EQ(loop->condition_->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[0]->text_, "test");
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[1]->text_, "-f");
-  EXPECT_EQ(loop->condition_->commands_[0]->words_[2]->text_, "ready.flag");
+  auto* cond_cmd = static_cast<Command*>(loop->condition_->commands_[0].get());
+  ASSERT_EQ(cond_cmd->words_.size(), 3);
+  EXPECT_EQ(cond_cmd->words_[0]->text_, "test");
+  EXPECT_EQ(cond_cmd->words_[1]->text_, "-f");
+  EXPECT_EQ(cond_cmd->words_[2]->text_, "ready.flag");
 
   // Check body: sleep 1
   ASSERT_EQ(loop->body_->statements_.size(), 1);
   auto* body_pipeline = static_cast<Pipeline*>(loop->body_->statements_[0].get());
   ASSERT_EQ(body_pipeline->commands_.size(), 1);
-  ASSERT_EQ(body_pipeline->commands_[0]->words_.size(), 2);
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[0]->text_, "sleep");
-  EXPECT_EQ(body_pipeline->commands_[0]->words_[1]->text_, "1");
+  auto* body_cmd = static_cast<Command*>(body_pipeline->commands_[0].get());
+  ASSERT_EQ(body_cmd->words_.size(), 2);
+  EXPECT_EQ(body_cmd->words_[0]->text_, "sleep");
+  EXPECT_EQ(body_cmd->words_[1]->text_, "1");
 }
 
 TEST_F(ParserTest, ComplexRedirectionOperators) {
@@ -556,24 +566,28 @@ fi
   auto* conditional = static_cast<ConditionalStatement*>(compound->statements_[0].get());
 
   // Check main condition: test -f file1
-  ASSERT_EQ(conditional->condition_->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(conditional->condition_->commands_[0]->words_[2]->text_, "file1");
+  auto* main_cond_cmd = static_cast<Command*>(conditional->condition_->commands_[0].get());
+  ASSERT_EQ(main_cond_cmd->words_.size(), 3);
+  EXPECT_EQ(main_cond_cmd->words_[2]->text_, "file1");
 
   // Check elif clauses
   ASSERT_EQ(conditional->elif_clauses_.size(), 3);
 
   // First elif: test -f file2
-  ASSERT_EQ(conditional->elif_clauses_[0].first->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(conditional->elif_clauses_[0].first->commands_[0]->words_[2]->text_, "file2");
+  auto* elif1_cmd = static_cast<Command*>(conditional->elif_clauses_[0].first->commands_[0].get());
+  ASSERT_EQ(elif1_cmd->words_.size(), 3);
+  EXPECT_EQ(elif1_cmd->words_[2]->text_, "file2");
   ASSERT_EQ(conditional->elif_clauses_[0].second->statements_.size(), 1);
 
   // Second elif: test -f file3
-  EXPECT_EQ(conditional->elif_clauses_[1].first->commands_[0]->words_[2]->text_, "file3");
+  auto* elif2_cmd = static_cast<Command*>(conditional->elif_clauses_[1].first->commands_[0].get());
+  EXPECT_EQ(elif2_cmd->words_[2]->text_, "file3");
 
   // Third elif: test -d dir1
-  ASSERT_EQ(conditional->elif_clauses_[2].first->commands_[0]->words_.size(), 3);
-  EXPECT_EQ(conditional->elif_clauses_[2].first->commands_[0]->words_[1]->text_, "-d");
-  EXPECT_EQ(conditional->elif_clauses_[2].first->commands_[0]->words_[2]->text_, "dir1");
+  auto* elif3_cmd = static_cast<Command*>(conditional->elif_clauses_[2].first->commands_[0].get());
+  ASSERT_EQ(elif3_cmd->words_.size(), 3);
+  EXPECT_EQ(elif3_cmd->words_[1]->text_, "-d");
+  EXPECT_EQ(elif3_cmd->words_[2]->text_, "dir1");
 
   // Check else body exists
   ASSERT_TRUE(conditional->else_body_);
@@ -703,11 +717,12 @@ TEST_F(ParserTest, BackgroundPipelineWithRedirections) {
   ASSERT_EQ(pipeline->commands_.size(), 2);
 
   // Check second command has redirections
-  ASSERT_EQ(pipeline->commands_[1]->redirections_.size(), 2);
-  EXPECT_EQ(pipeline->commands_[1]->redirections_[0]->kind_, Redirection::Kind::Output);
-  EXPECT_EQ(pipeline->commands_[1]->redirections_[0]->target_->text_, "output.log");
-  EXPECT_EQ(pipeline->commands_[1]->redirections_[1]->kind_, Redirection::Kind::Output);
-  EXPECT_EQ(pipeline->commands_[1]->redirections_[1]->target_->text_, "error.log");
+  auto* cmd_with_redir = static_cast<Command*>(pipeline->commands_[1].get());
+  ASSERT_EQ(cmd_with_redir->redirections_.size(), 2);
+  EXPECT_EQ(cmd_with_redir->redirections_[0]->kind_, Redirection::Kind::Output);
+  EXPECT_EQ(cmd_with_redir->redirections_[0]->target_->text_, "output.log");
+  EXPECT_EQ(cmd_with_redir->redirections_[1]->kind_, Redirection::Kind::Output);
+  EXPECT_EQ(cmd_with_redir->redirections_[1]->target_->text_, "error.log");
 }
 
 TEST_F(ParserTest, ComplexVariableExpansions) {
@@ -733,12 +748,12 @@ TEST_F(ParserTest, LongPipeline) {
   auto pipeline = std::move(result.value());
   ASSERT_EQ(pipeline->commands_.size(), 6);
 
-  EXPECT_EQ(pipeline->commands_[0]->words_[0]->text_, "cat");
-  EXPECT_EQ(pipeline->commands_[1]->words_[0]->text_, "grep");
-  EXPECT_EQ(pipeline->commands_[2]->words_[0]->text_, "sort");
-  EXPECT_EQ(pipeline->commands_[3]->words_[0]->text_, "uniq");
-  EXPECT_EQ(pipeline->commands_[4]->words_[0]->text_, "head");
-  EXPECT_EQ(pipeline->commands_[5]->words_[0]->text_, "tail");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[0].get())->words_[0]->text_, "cat");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[1].get())->words_[0]->text_, "grep");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[2].get())->words_[0]->text_, "sort");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[3].get())->words_[0]->text_, "uniq");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[4].get())->words_[0]->text_, "head");
+  EXPECT_EQ(static_cast<Command*>(pipeline->commands_[5].get())->words_[0]->text_, "tail");
 }
 
 TEST_F(ParserTest, ErrorHandling) {

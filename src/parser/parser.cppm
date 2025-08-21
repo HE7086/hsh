@@ -10,6 +10,7 @@ export module hsh.parser;
 
 import hsh.core;
 import hsh.lexer;
+import hsh.executor;
 
 export namespace hsh::parser {
 
@@ -122,18 +123,17 @@ struct CompoundStatement : ASTNode {
   [[nodiscard]] auto type() const noexcept -> Type override;
   [[nodiscard]] auto clone() const -> std::unique_ptr<ASTNode> override;
 
-  // Create ExecutableNode wrapper for this CompoundStatement
-  [[nodiscard]] auto as_executable() const -> core::ExecutableNodePtr;
+  [[nodiscard]] auto as_executable() const -> executor::ExecutableNodePtr;
 };
 
 // Wrapper class for CompoundStatement as ExecutableNode
-class CompoundStatementExecutable : public core::ExecutableNode {
+class CompoundStatementExecutable : public executor::ExecutableNode {
   std::unique_ptr<CompoundStatement> compound_;
 
 public:
   explicit CompoundStatementExecutable(std::unique_ptr<CompoundStatement> compound);
 
-  [[nodiscard]] auto clone() const -> std::unique_ptr<core::ExecutableNode> override;
+  [[nodiscard]] auto clone() const -> std::unique_ptr<executor::ExecutableNode> override;
   [[nodiscard]] auto type_name() const noexcept -> std::string_view override;
   [[nodiscard]] auto get_compound() const -> CompoundStatement const&;
 };

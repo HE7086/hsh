@@ -169,6 +169,15 @@ auto Parser::parse_pipeline_or_subshell() -> ParseResult<ASTNode> {
   if (!pipeline_result) {
     return std::unexpected(pipeline_result.error());
   }
+  
+  // If the pipeline contains only a single subshell, return the subshell directly
+  auto& pipeline = pipeline_result.value();
+  if (pipeline->commands_.size() == 1 && !pipeline->background_) {
+    if (pipeline->commands_[0]->type() == ASTNode::Type::Subshell) {
+      return std::move(pipeline->commands_[0]);
+    }
+  }
+  
   return std::unique_ptr<ASTNode>(pipeline_result->release());
 }
 

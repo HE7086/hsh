@@ -21,7 +21,9 @@ import hsh.compiler;
 namespace hsh::shell {
 
 CommandRunner::CommandRunner(context::Context& context, job::JobManager& job_manager)
-    : context_(context), job_manager_(job_manager), pipeline_runner_(job_manager_, context) {}
+    : context_(context)
+    , job_manager_(job_manager)
+    , pipeline_runner_(job_manager_, context, make_subshell_executor(context)) {}
 
 auto CommandRunner::execute_command(std::string_view input) -> ExecutionResult {
   if (input.empty()) {
@@ -57,21 +59,6 @@ auto CommandRunner::execute_pipeline(process::Pipeline const& pipeline) -> Execu
     return ExecutionResult{0, "", true};
   }
 
-  if (pipeline.kind_ == process::PipelineKind::Simple) {
-    for (auto const& process : pipeline.processes_) {
-      if (process.is_subshell()) {
-        if (auto const* executable = process.subshell_body_.get()) {
-          if (executable->type_name() == "CompoundStatement") {
-            if (auto const* wrapper = dynamic_cast<parser::CompoundStatementExecutable const*>(executable)) {
-              return execute_subshell(wrapper->get_compound());
-            }
-          }
-        }
-        return ExecutionResult{1, "Invalid subshell body", false};
-      }
-    }
-  }
-
   auto result = pipeline_runner_.execute(pipeline);
 
   if (!result) {
@@ -88,19 +75,6 @@ auto CommandRunner::execute_pipeline_with_command(process::Pipeline const& pipel
   if (pipeline.processes_.empty()) {
     context_.set_exit_status(0);
     return ExecutionResult{0, "", true};
-  }
-
-  for (auto const& process : pipeline.processes_) {
-    if (process.is_subshell()) {
-      if (auto const* executable = process.subshell_body_.get()) {
-        if (executable->type_name() == "CompoundStatement") {
-          if (auto const* wrapper = dynamic_cast<parser::CompoundStatementExecutable const*>(executable)) {
-            return execute_subshell(wrapper->get_compound());
-          }
-        }
-      }
-      return ExecutionResult{1, "Invalid subshell body", false};
-    }
   }
 
   if (pipeline.background_) {

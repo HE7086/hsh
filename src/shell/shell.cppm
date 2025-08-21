@@ -12,6 +12,7 @@ import hsh.parser;
 import hsh.process;
 import hsh.job;
 import hsh.context;
+import hsh.executor;
 
 export namespace hsh::shell {
 
@@ -55,5 +56,7 @@ private:
 };
 
 auto build_prompt(context::Context&) noexcept -> std::string;
+
+auto make_subshell_executor(context::Context& context) -> std::unique_ptr<executor::SubshellExecutor>;
 
 } // namespace hsh::shell

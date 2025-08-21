@@ -9,6 +9,7 @@ target_sources(hsh_shell
     command_runner.cpp
     prompt.cpp
     app.cpp
+    subshell_executor.cpp
 )
 
-target_link_libraries(hsh_shell PRIVATE hsh_common hsh_core hsh_context hsh_expand hsh_lexer hsh_parser hsh_process hsh_builtin hsh_cli hsh_compiler)
+target_link_libraries(hsh_shell PRIVATE hsh_common hsh_core hsh_context hsh_expand hsh_lexer hsh_parser hsh_process hsh_builtin hsh_cli hsh_compiler hsh_executor)

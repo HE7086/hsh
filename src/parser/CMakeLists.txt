@@ -10,4 +10,4 @@ target_sources(hsh_parser
     printer.cpp
 )
 
-target_link_libraries(hsh_parser PRIVATE hsh_common hsh_core hsh_lexer)
+target_link_libraries(hsh_parser PRIVATE hsh_common hsh_core hsh_lexer hsh_executor)

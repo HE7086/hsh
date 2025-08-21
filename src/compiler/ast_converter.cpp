@@ -147,12 +147,17 @@ auto ASTConverter::convert_assignment(parser::Assignment const& assignment) cons
 
   context_.set_variable(std::move(name), std::move(value));
 
-  return process::Pipeline{};
+  process::Pipeline pipeline;
+  pipeline.kind_ = process::PipelineKind::Assignment;
+  return pipeline;
 }
 
 auto ASTConverter::convert_compound_statement(parser::CompoundStatement const& stmt) const -> Result<process::Pipeline> {
   if (stmt.statements_.empty()) {
-    return std::unexpected("Empty compound statement");
+    // Empty compound statement (e.g., empty subshell) - return an empty pipeline
+    process::Pipeline pipeline;
+    pipeline.kind_ = process::PipelineKind::EmptySubshell;
+    return pipeline;
   }
 
   if (stmt.statements_.size() == 1) {

@@ -94,7 +94,7 @@ auto CompoundStatement::clone() const -> std::unique_ptr<ASTNode> {
 CompoundStatementExecutable::CompoundStatementExecutable(std::unique_ptr<CompoundStatement> compound)
     : compound_(std::move(compound)) {}
 
-auto CompoundStatementExecutable::clone() const -> std::unique_ptr<core::ExecutableNode> {
+auto CompoundStatementExecutable::clone() const -> std::unique_ptr<executor::ExecutableNode> {
   auto cloned_compound = std::
       unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(compound_->clone().release()));
   return std::make_unique<CompoundStatementExecutable>(std::move(cloned_compound));
@@ -108,7 +108,7 @@ auto CompoundStatementExecutable::get_compound() const -> CompoundStatement cons
   return *compound_;
 }
 
-auto CompoundStatement::as_executable() const -> core::ExecutableNodePtr {
+auto CompoundStatement::as_executable() const -> executor::ExecutableNodePtr {
   auto cloned = std::unique_ptr<CompoundStatement>(static_cast<CompoundStatement*>(clone().release()));
   return std::make_unique<CompoundStatementExecutable>(std::move(cloned));
 }

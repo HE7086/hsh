@@ -50,16 +50,6 @@ auto environ() -> char**;
 template<typename T, typename U = std::string>
 using Result = std::expected<T, U>;
 
-// Abstract interface for executable AST nodes to avoid circular dependency
-// TODO: find a better way
-class ExecutableNode {
-public:
-  virtual ~ExecutableNode()                                     = default;
-  virtual auto clone() const -> std::unique_ptr<ExecutableNode> = 0;
-  virtual auto type_name() const noexcept -> std::string_view   = 0;
-};
-using ExecutableNodePtr = std::unique_ptr<ExecutableNode>;
-
 namespace util {
 
 template<typename Iterator, typename Sentinel, typename CharT = char>

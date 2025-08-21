@@ -11,6 +11,7 @@ export module hsh.process;
 import hsh.core;
 import hsh.job;
 import hsh.context;
+import hsh.executor;
 
 export namespace hsh::process {
 
@@ -42,7 +43,7 @@ struct Process {
   std::optional<core::FileDescriptor> stdout_fd_;
   std::optional<core::FileDescriptor> stderr_fd_;
 
-  core::ExecutableNodePtr subshell_body_;
+  executor::ExecutableNodePtr subshell_body_;
 
   [[nodiscard]] constexpr auto is_subshell() const noexcept -> bool {
     return kind_ == ProcessKind::Subshell;
@@ -58,16 +59,18 @@ struct Process {
 
   template<typename T>
   [[nodiscard]] auto get_subshell_body() const -> T const* {
-    static_assert(std::is_base_of_v<core::ExecutableNode, T>);
+    static_assert(std::is_base_of_v<executor::ExecutableNode, T>);
     return static_cast<T const*>(subshell_body_.get());
   }
 };
 
 enum struct PipelineKind {
-  Simple,      // Regular pipeline with processes connected by pipes
-  Sequential,  // Multiple pipelines executed sequentially
-  Conditional, // Conditional execution (if/elif/else)
-  Loop         // Loop execution (while/until/for)
+  Simple,       // Regular pipeline with processes connected by pipes
+  Sequential,   // Multiple pipelines executed sequentially
+  Conditional,  // Conditional execution (if/elif/else)
+  Loop,         // Loop execution (while/until/for)
+  EmptySubshell,// Empty subshell pipeline - should succeed with exit status 0
+  Assignment    // Assignment pipeline - should succeed with exit status 0
 };
 
 struct Pipeline {
@@ -113,12 +116,14 @@ struct PipelineResult {
 };
 
 class PipelineRunner {
-  JobManager&       job_manager_;
-  context::Context& context_;
+  JobManager&                                      job_manager_;
+  context::Context&                                context_;
+  std::unique_ptr<executor::SubshellExecutor>      subshell_executor_;
 
 public:
-  explicit PipelineRunner(JobManager& job_manager, context::Context& context)
-      : job_manager_(job_manager), context_(context) {}
+  explicit PipelineRunner(JobManager& job_manager, context::Context& context, 
+                         std::unique_ptr<executor::SubshellExecutor> subshell_executor = nullptr)
+      : job_manager_(job_manager), context_(context), subshell_executor_(std::move(subshell_executor)) {}
 
   auto execute(Pipeline const& pipeline) -> Result<PipelineResult>;
   auto execute_background(Pipeline const& pipeline, std::string const& command) const -> Result<std::pair<int, pid_t>>;
@@ -138,6 +143,13 @@ private:
   ) -> Result<pid_t>;
 
   auto spawn_builtin_process(
+      Process const&                             process,
+      std::optional<core::FileDescriptor> const& stdin_fd,
+      std::optional<core::FileDescriptor> const& stdout_fd,
+      std::optional<core::FileDescriptor> const& stderr_fd
+  ) const -> Result<pid_t>;
+
+  auto spawn_subshell_process(
       Process const&                             process,
       std::optional<core::FileDescriptor> const& stdin_fd,
       std::optional<core::FileDescriptor> const& stdout_fd,

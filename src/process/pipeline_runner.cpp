@@ -22,6 +22,7 @@ module hsh.process;
 import hsh.core;
 import hsh.builtin;
 import hsh.context;
+import hsh.executor;
 
 namespace hsh::process {
 
@@ -31,6 +32,8 @@ auto PipelineRunner::execute(Pipeline const& pipeline) -> Result<PipelineResult>
     case PipelineKind::Sequential: return execute_sequential_pipeline(pipeline);
     case PipelineKind::Conditional: return execute_conditional_pipeline(pipeline);
     case PipelineKind::Loop: return execute_loop_pipeline(pipeline);
+    case PipelineKind::EmptySubshell: return PipelineResult{{}, 0};
+    case PipelineKind::Assignment: return PipelineResult{{}, 0};
   }
   return std::unexpected("Unknown pipeline kind");
 }
@@ -90,7 +93,9 @@ auto PipelineRunner::execute_simple_pipeline(Pipeline const& pipeline) const -> 
     auto pid_result =
         process.is_builtin()
             ? spawn_builtin_process(process, stdin_fd, stdout_fd, stderr_fd)
-            : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
+            : process.is_subshell()
+                ? spawn_subshell_process(process, stdin_fd, stdout_fd, stderr_fd)
+                : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
     if (!pid_result) {
       for (pid_t existing_pid : pids) {
         [[maybe_unused]] auto kill_result = core::syscall::kill_process(existing_pid, SIGTERM);
@@ -190,7 +195,9 @@ auto PipelineRunner::execute_background(Pipeline const& pipeline, std::string co
     auto pid_result =
         process.is_builtin()
             ? spawn_builtin_process(process, stdin_fd, stdout_fd, stderr_fd)
-            : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
+            : process.is_subshell()
+                ? spawn_subshell_process(process, stdin_fd, stdout_fd, stderr_fd)
+                : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
     if (!pid_result) {
       for (pid_t existing_pid : pids) {
         [[maybe_unused]] auto kill_result = core::syscall::kill_process(existing_pid, SIGTERM);
@@ -333,6 +340,63 @@ auto PipelineRunner::spawn_builtin_process(
     int exit_status = builtin::Registry::instance().execute_builtin(process.program_, process.args_, context_);
 
     std::exit(exit_status);
+  }
+
+  return pid;
+}
+
+auto PipelineRunner::spawn_subshell_process(
+    Process const&                             process,
+    std::optional<core::FileDescriptor> const& stdin_fd,
+    std::optional<core::FileDescriptor> const& stdout_fd,
+    std::optional<core::FileDescriptor> const& stderr_fd
+) const -> Result<pid_t> {
+  if (!process.is_subshell()) {
+    return std::unexpected("Process is not a subshell");
+  }
+
+  auto fork_result = core::syscall::fork_process();
+  if (!fork_result) {
+    return std::unexpected(std::format("Failed to fork for subshell: {}", std::strerror(fork_result.error())));
+  }
+
+  pid_t pid = *fork_result;
+
+  if (pid == 0) {
+    // Child process: execute the subshell body
+    if (stdin_fd && stdin_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stdin_fd->get(), STDIN_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stdin for subshell: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    if (stdout_fd && stdout_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stdout_fd->get(), STDOUT_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stdout for subshell: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    if (stderr_fd && stderr_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stderr_fd->get(), STDERR_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stderr for subshell: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    // Execute the subshell body using the injected executor
+    if (process.subshell_body_ && subshell_executor_) {
+      if (auto result = subshell_executor_->execute_subshell_body(process.subshell_body_)) {
+        std::exit(*result);
+      } else {
+        std::println(stderr, "Failed to execute subshell: {}", result.error());
+        std::exit(EXIT_FAILURE);
+      }
+    }
+    
+    std::println(stderr, "Subshell has no body to execute or no executor available");
+    std::exit(EXIT_FAILURE);
   }
 
   return pid;
