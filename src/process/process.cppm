@@ -5,8 +5,6 @@ module;
 #include <span>
 #include <string>
 #include <vector>
-#include <sys/wait.h>
-#include <unistd.h>
 
 export module hsh.process;
 
@@ -138,6 +136,13 @@ private:
       std::optional<core::FileDescriptor> const& stdout_fd,
       std::optional<core::FileDescriptor> const& stderr_fd
   ) -> Result<pid_t>;
+
+  auto spawn_builtin_process(
+      Process const&                             process,
+      std::optional<core::FileDescriptor> const& stdin_fd,
+      std::optional<core::FileDescriptor> const& stdout_fd,
+      std::optional<core::FileDescriptor> const& stderr_fd
+  ) const -> Result<pid_t>;
 
   static auto wait_for_processes(std::span<pid_t const> pids) -> Result<std::vector<ProcessResult>>;
   static auto create_pipe_chain(Pipeline const& pipeline)

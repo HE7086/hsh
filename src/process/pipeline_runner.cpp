@@ -1,16 +1,20 @@
 module;
 
 #include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <expected>
 #include <format>
 #include <optional>
+#include <print>
 #include <span>
 #include <string>
 #include <vector>
 
 #include <signal.h>
 #include <spawn.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 module hsh.process;
@@ -39,19 +43,6 @@ auto PipelineRunner::execute_simple_pipeline(Pipeline const& pipeline) const -> 
   // Special case: single builtin command (no piping needed)
   if (pipeline.processes_.size() == 1 && pipeline.processes_[0].is_builtin()) {
     return execute_builtin_process(pipeline.processes_[0], pipeline);
-  }
-
-  // Check if pipeline contains builtins mixed with external commands
-  bool has_builtins = false;
-  for (auto const& process : pipeline.processes_) {
-    if (process.is_builtin()) {
-      has_builtins = true;
-      break;
-    }
-  }
-
-  if (has_builtins) {
-    return std::unexpected("Builtin commands in pipelines with external commands not yet supported");
   }
 
   auto pipes_result = create_pipe_chain(pipeline);
@@ -96,7 +87,10 @@ auto PipelineRunner::execute_simple_pipeline(Pipeline const& pipeline) const -> 
       stderr_fd = core::FileDescriptor(process.stderr_fd_->get(), false);
     }
 
-    auto pid_result = spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
+    auto pid_result =
+        process.is_builtin()
+            ? spawn_builtin_process(process, stdin_fd, stdout_fd, stderr_fd)
+            : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
     if (!pid_result) {
       for (pid_t existing_pid : pids) {
         [[maybe_unused]] auto kill_result = core::syscall::kill_process(existing_pid, SIGTERM);
@@ -193,7 +187,10 @@ auto PipelineRunner::execute_background(Pipeline const& pipeline, std::string co
       stderr_fd = core::FileDescriptor(process.stderr_fd_->get(), false);
     }
 
-    auto pid_result = spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
+    auto pid_result =
+        process.is_builtin()
+            ? spawn_builtin_process(process, stdin_fd, stdout_fd, stderr_fd)
+            : spawn_process(process, stdin_fd, stdout_fd, stderr_fd);
     if (!pid_result) {
       for (pid_t existing_pid : pids) {
         [[maybe_unused]] auto kill_result = core::syscall::kill_process(existing_pid, SIGTERM);
@@ -291,6 +288,54 @@ auto PipelineRunner::spawn_process(
   }
 
   return *spawn_result;
+}
+
+auto PipelineRunner::spawn_builtin_process(
+    Process const&                             process,
+    std::optional<core::FileDescriptor> const& stdin_fd,
+    std::optional<core::FileDescriptor> const& stdout_fd,
+    std::optional<core::FileDescriptor> const& stderr_fd
+) const -> Result<pid_t> {
+  if (!process.is_builtin()) {
+    return std::unexpected("Process is not a builtin command");
+  }
+
+  auto fork_result = core::syscall::fork_process();
+  if (!fork_result) {
+    return std::unexpected(std::format("Failed to fork for builtin: {}", std::strerror(fork_result.error())));
+  }
+
+  pid_t pid = *fork_result;
+
+  // TODO: use compiler::redirection
+  if (pid == 0) {
+    if (stdin_fd && stdin_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stdin_fd->get(), STDIN_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stdin for builtin: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    if (stdout_fd && stdout_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stdout_fd->get(), STDOUT_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stdout for builtin: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    if (stderr_fd && stderr_fd->valid()) {
+      if (auto result = core::syscall::duplicate_fd_to(stderr_fd->get(), STDERR_FILENO); !result) {
+        std::println(stderr, "Failed to redirect stderr for builtin: {}", std::strerror(result.error()));
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
+    int exit_status = builtin::Registry::instance().execute_builtin(process.program_, process.args_, context_);
+
+    std::exit(exit_status);
+  }
+
+  return pid;
 }
 
 auto PipelineRunner::wait_for_processes(std::span<pid_t const> pids) -> Result<std::vector<ProcessResult>> {

@@ -166,4 +166,19 @@ auto duplicate_fd(int fd) -> Result<int> {
   return new_fd;
 }
 
+auto duplicate_fd_to(int oldfd, int newfd) -> Result<void> {
+  if (dup2(oldfd, newfd) == -1) {
+    return std::unexpected(errno);
+  }
+  return {};
+}
+
+auto fork_process() -> Result<pid_t> {
+  pid_t pid = fork();
+  if (pid == -1) {
+    return std::unexpected(errno);
+  }
+  return pid;
+}
+
 } // namespace hsh::core::syscall
