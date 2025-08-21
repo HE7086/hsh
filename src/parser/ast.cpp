@@ -74,7 +74,7 @@ auto Pipeline::clone() const -> std::unique_ptr<ASTNode> {
   auto pipeline         = std::make_unique<Pipeline>();
   pipeline->background_ = background_;
   for (auto const& cmd : commands_) {
-    pipeline->commands_.push_back(std::unique_ptr<Command>(static_cast<Command*>(cmd->clone().release())));
+    pipeline->commands_.push_back(cmd->clone());
   }
   return pipeline;
 }

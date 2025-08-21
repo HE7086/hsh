@@ -21,7 +21,7 @@ import hsh.compiler.redirection;
 
 namespace hsh::compiler {
 
-auto ASTConverter::convert(parser::ASTNode const& ast) -> Result<process::Pipeline> {
+auto ASTConverter::convert(parser::ASTNode const& ast) const -> Result<process::Pipeline> {
   switch (ast.type()) {
     case parser::ASTNode::Type::Pipeline: {
       return convert_pipeline(static_cast<parser::Pipeline const&>(ast));
@@ -66,7 +66,7 @@ auto ASTConverter::convert_pipeline(parser::Pipeline const& ast_pipeline) const 
   pipeline.background_ = ast_pipeline.background_;
 
   for (auto const& command : ast_pipeline.commands_) {
-    auto result = convert_command(*command);
+    auto result = convert(*command);
     if (!result) {
       return std::unexpected(result.error());
     }
@@ -150,7 +150,7 @@ auto ASTConverter::convert_assignment(parser::Assignment const& assignment) cons
   return process::Pipeline{};
 }
 
-auto ASTConverter::convert_compound_statement(parser::CompoundStatement const& stmt) -> Result<process::Pipeline> {
+auto ASTConverter::convert_compound_statement(parser::CompoundStatement const& stmt) const -> Result<process::Pipeline> {
   if (stmt.statements_.empty()) {
     return std::unexpected("Empty compound statement");
   }
@@ -187,7 +187,7 @@ auto ASTConverter::convert_subshell(parser::Subshell const& subshell) const -> R
   return pipeline;
 }
 
-auto ASTConverter::convert_conditional(parser::ConditionalStatement const& conditional) -> Result<process::Pipeline> {
+auto ASTConverter::convert_conditional(parser::ConditionalStatement const& conditional) const -> Result<process::Pipeline> {
   process::Pipeline pipeline;
   pipeline.kind_ = process::PipelineKind::Conditional;
 
@@ -231,7 +231,7 @@ auto ASTConverter::convert_conditional(parser::ConditionalStatement const& condi
   return pipeline;
 }
 
-auto ASTConverter::convert_loop(parser::LoopStatement const& loop) -> Result<process::Pipeline> {
+auto ASTConverter::convert_loop(parser::LoopStatement const& loop) const -> Result<process::Pipeline> {
   process::Pipeline pipeline;
   pipeline.kind_ = process::PipelineKind::Loop;
 
@@ -274,7 +274,7 @@ auto ASTConverter::convert_loop(parser::LoopStatement const& loop) -> Result<pro
   return pipeline;
 }
 
-auto ASTConverter::convert_case(parser::CaseStatement const& case_stmt) -> Result<process::Pipeline> {
+auto ASTConverter::convert_case(parser::CaseStatement const& case_stmt) const -> Result<process::Pipeline> {
   auto expr = convert_word(*case_stmt.expression_);
   if (expr.empty()) {
     return std::unexpected("Case expression expanded to empty list");
@@ -298,7 +298,7 @@ auto ASTConverter::convert_case(parser::CaseStatement const& case_stmt) -> Resul
   return process::Pipeline{};
 }
 
-auto ASTConverter::convert_logical_expression(parser::LogicalExpression const&) -> Result<process::Pipeline> {
+auto ASTConverter::convert_logical_expression(parser::LogicalExpression const&) const -> Result<process::Pipeline> {
   // For logical expressions, we cannot directly represent them as a single pipeline
   // since they require conditional execution. We'll need to handle this at the shell level.
   // For now, we'll return an error to indicate this needs special handling.

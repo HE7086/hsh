@@ -121,23 +121,23 @@ auto Parser::parse_statement() -> ParseResult<ASTNode> {
 auto Parser::parse_pipeline() -> ParseResult<Pipeline> {
   auto pipeline = std::make_unique<Pipeline>();
 
-  auto cmd_result = parse_command();
-  if (!cmd_result) {
-    return std::unexpected(cmd_result.error());
+  auto elem = parse_pipeline_element();
+  if (!elem) {
+    return std::unexpected(elem.error());
   }
 
-  pipeline->commands_.push_back(std::move(cmd_result.value()));
+  pipeline->commands_.push_back(std::move(elem.value()));
 
   while (current_token_.kind_ == lexer::TokenType::Pipe) {
     advance();
     skip_newlines();
 
-    auto next_cmd_result = parse_command();
-    if (!next_cmd_result) {
-      return std::unexpected(next_cmd_result.error());
+    auto next = parse_pipeline_element();
+    if (!next) {
+      return std::unexpected(next.error());
     }
 
-    pipeline->commands_.push_back(std::move(next_cmd_result.value()));
+    pipeline->commands_.push_back(std::move(next.value()));
   }
 
   if (current_token_.kind_ == lexer::TokenType::Ampersand) {
@@ -148,8 +148,7 @@ auto Parser::parse_pipeline() -> ParseResult<Pipeline> {
   return std::move(pipeline);
 }
 
-auto Parser::parse_pipeline_or_subshell() -> ParseResult<ASTNode> {
-  // Check if this is a subshell
+auto Parser::parse_pipeline_element() -> ParseResult<ASTNode> {
   if (current_token_.kind_ == lexer::TokenType::LeftParen) {
     auto subshell_result = parse_subshell();
     if (!subshell_result) {
@@ -158,7 +157,14 @@ auto Parser::parse_pipeline_or_subshell() -> ParseResult<ASTNode> {
     return std::unique_ptr<ASTNode>(subshell_result->release());
   }
 
-  // Otherwise, parse as pipeline
+  auto command_result = parse_command();
+  if (!command_result) {
+    return std::unexpected(command_result.error());
+  }
+  return std::unique_ptr<ASTNode>(command_result->release());
+}
+
+auto Parser::parse_pipeline_or_subshell() -> ParseResult<ASTNode> {
   auto pipeline_result = parse_pipeline();
   if (!pipeline_result) {
     return std::unexpected(pipeline_result.error());

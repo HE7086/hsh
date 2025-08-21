@@ -108,7 +108,7 @@ struct Command : ASTNode {
 
 // Pipeline node (commands connected by |)
 struct Pipeline : ASTNode {
-  std::vector<std::unique_ptr<Command>> commands_;
+  std::vector<std::unique_ptr<ASTNode>> commands_;
   bool                                  background_ = false;
 
   [[nodiscard]] auto type() const noexcept -> Type override;
@@ -228,6 +228,7 @@ public:
   [[nodiscard]] auto parse_logical_expression() -> ParseResult<ASTNode>;
   [[nodiscard]] auto parse_pipeline_or_subshell() -> ParseResult<ASTNode>;
   [[nodiscard]] auto parse_pipeline() -> ParseResult<Pipeline>;
+  [[nodiscard]] auto parse_pipeline_element() -> ParseResult<ASTNode>;
   [[nodiscard]] auto parse_command() -> ParseResult<Command>;
   [[nodiscard]] auto parse_word() -> ParseResult<Word>;
   [[nodiscard]] auto parse_assignment() -> ParseResult<Assignment>;
