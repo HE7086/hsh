@@ -25,5 +25,9 @@ fmt:
   find src -name '*.cpp*' -exec clang-format -i {} \;
   find test -name '*.cpp*' -exec clang-format -i {} \;
 
+release:
+  cmake -B cmake-build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+  cmake --build cmake-build-release
+
 clean:
   rm -rf build .cache
